@@ -7,6 +7,9 @@ Training and Evaluation:
 Resizing Dataset Images:
     see resize_dataset_image.py
 
+Transfer .ipynb to .py:
+    jupyter nbconvert --to python xxx.ipynb
+
 ToDo list:
 [] Add Argparse to resizing_dataset_image.py and train_eval.ipynb
 [] Try Efficient Net
