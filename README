@@ -1,6 +1,13 @@
 Install Requirement:
     pip install -r requirements.txt
 
+Run Script:
+    i) resize dataset images
+        python downscale_image_script.py
+
+    ii) train and evaluate
+        python train_eval_script.py
+
 Training and Evaluation:
     see train_eval.ipynb
 
