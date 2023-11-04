@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[6]:
 
 
-
+# !python script.py
 
 
 # In[95]:
@@ -39,7 +39,57 @@ from sklearn.metrics import confusion_matrix
 from pathlib import Path
 from collections import defaultdict
 from tqdm.notebook import tqdm
+import validators
 
+import argparse
+import re
+
+
+# In[ ]:
+
+
+## using argparse to set parameters
+parser = argparse.ArgumentParser(description='Train model on UCB Image Dataset')
+parser.add_argument('--source_dataset_dir', type=str, default='/projectnb/cs640grp/materials/UBC-OCEAN_CS640', help='path to dataset')
+parser.add_argument('--local_dataset_dir', type=str, default='./dataset', help='path to local dataset')
+parser.add_argument('--model_dir', type=str, default='./model', help='path to tained model')
+parser.add_argument('--experiment_name', type=str, default='exp_1', help='experiment name')
+
+parser.add_argument('--train_image_folder', type=str, default='img_size_256x256', help='training image folder name')
+# parser.add_argument('--train_image_folder', type=str, default='train_images_compressed_80', help='training image folder name')
+parser.add_argument('--image_input_size', type=str, default='(256, 256)', help='input image size')
+parser.add_argument('--batch_size', type=int, default=64, help='batch size')
+parser.add_argument('--num_epochs', type=int, default=10, help='number of epochs')
+parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
+# parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
+parser.add_argument('--weight_decay', type=float, default=0.0001, help='weight decay')
+
+
+# In[ ]:
+
+
+setting = None
+try:
+    __IPYTHON__
+    _in_ipython_session = True
+    settings = parser.parse_args("")
+except NameError:
+    _in_ipython_session = False
+    settings = parser.parse_args()
+
+print("settings:", vars(settings))
+# # save settings in to a log file
+# with open(Path(settings.model_dir, settings.experiment_name, 'settings.txt'), 'w') as f:
+#     print(vars(settings), file=f)
+
+
+# In[ ]:
+
+
+image_input_size = eval(settings.image_input_size)
+assert isinstance(image_input_size, tuple) and len(image_input_size) == 2, "image_input_size must be a tuple of length 2"
+# vars(settings)
+# print(image_input_size)
 
 
 # In[96]:
@@ -61,21 +111,41 @@ def create_dir_if_not_exist(dir):
 # In[98]:
 
 
-SOURCE_DATASET_DIR = "/projectnb/cs640grp/materials/UBC-OCEAN_CS640"
+SOURCE_DATASET_DIR = settings.source_dataset_dir
 # DATASET_PATH = "dataset"
 # TRAIN_IMAGE_FOLDER = "train_images_compressed_80"
 # TEST_IMAGE_FOLDER = "test_images_compressed_80"
-TRAIN_IMAGE_FOLDER = f"img_size_{IMAGE_INPUT_SIZE[0]}x{IMAGE_INPUT_SIZE[1]}"
+# TRAIN_IMAGE_FOLDER = f"img_size_{IMAGE_INPUT_SIZE[0]}x{IMAGE_INPUT_SIZE[1]}"
+TRAIN_IMAGE_FOLDER = settings.train_image_folder
 
 
-LOCAL_DATASET_DIR = "./dataset"
+# LOCAL_DATASET_DIR = "./dataset"
+# MODEL_DIR = "./model/"
+# EXPERIMENT_NAME = "exp_1"
 
-MODEL_DIR = "./model/"
+LOCAL_DATASET_DIR = settings.local_dataset_dir
+MODEL_DIR = settings.model_dir
+EXPERIMENT_NAME = settings.experiment_name
 
-EXPERIMENT_NAME = "exp_1"
 MODEL_SAVE_DIR = Path(MODEL_DIR, EXPERIMENT_NAME)
 RESULT_DIR = Path("./result", EXPERIMENT_NAME)
 
+
+
+# In[ ]:
+
+
+# lr = 0.001
+# # momentum = 0.9
+# weight_decay = 0.0001
+# num_epochs = 20
+# batch_size = 32
+
+lr = settings.lr
+# momentum = settings.momentum
+weight_decay = settings.weight_decay
+num_epochs = settings.num_epochs
+batch_size = settings.batch_size
 
 
 # In[99]:
@@ -276,9 +346,9 @@ valid_dataset = UBCDataset(valid_set, transform=test_transform)
 # In[112]:
 
 
-train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=0)
-valid_dataloader = DataLoader(valid_dataset, batch_size=32, shuffle=False, num_workers=0)
-# test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=0)
+train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+# test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
 
 
 # In[113]:
@@ -410,10 +480,6 @@ summary(ubc_cnn_model, (3, ) + IMAGE_INPUT_SIZE, device=device.type)
 # In[117]:
 
 
-lr = 0.001
-# momentum = 0.9
-weight_decay = 0.0001
-num_epochs = 20
 criteria = nn.CrossEntropyLoss()
 optimizer = optim.Adam(ubc_cnn_model.parameters(), lr=lr, weight_decay=weight_decay)
 
@@ -455,9 +521,11 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
     valid_acc_list = []
 
     best_valid_loss = float('inf')
-    best_valid_acc = 0.0
+    best_valid_acc = -0.0001
     best_model_valid_loss = None
     best_model_valid_acc = None
+
+    start_time = time.time()
 
     for epoch in range(num_epochs):
         print(f'Epoch {epoch + 1}/{num_epochs}')
@@ -489,6 +557,8 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
         train_acc_list.append(train_acc)
 
         print(f'Train loss: {train_loss:.4f} Acc: {train_acc:.4f}')
+        elapsed_time = time.time() - start_time
+        print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
         valid_loss, valid_acc = eval(model, valid_dataloader, criteria, device)
 
@@ -504,6 +574,8 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
             best_model_valid_acc = copy.deepcopy(model)
 
         print(f'Valid loss: {valid_loss:.4f} Acc: {valid_acc:.4f}')
+        elapsed_time = time.time() - start_time
+        print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
     return model, best_model_valid_acc, best_model_valid_loss, \
            train_loss_list, train_acc_list, valid_loss_list, valid_acc_list

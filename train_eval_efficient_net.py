@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[21]:
+# In[117]:
 
 
+# !python script.py
 
 
-
-# In[22]:
+# In[99]:
 
 
 import torch
@@ -41,16 +41,74 @@ from collections import defaultdict
 from tqdm.notebook import tqdm
 import validators
 
+import argparse
+# import inspect
+import re
 
-# In[2]:
+
+# In[105]:
+
+
+
+
+
+# In[67]:
+
+
+## using argparse to set parameters
+parser = argparse.ArgumentParser(description='Train model on UCB Image Dataset')
+parser.add_argument('--source_dataset_dir', type=str, default='/projectnb/cs640grp/materials/UBC-OCEAN_CS640', help='path to dataset')
+parser.add_argument('--local_dataset_dir', type=str, default='./dataset', help='path to local dataset')
+parser.add_argument('--model_dir', type=str, default='./model', help='path to tained model')
+parser.add_argument('--experiment_name', type=str, default='exp_1', help='experiment name')
+
+parser.add_argument('--train_image_folder', type=str, default='img_size_256x256', help='training image folder name')
+# parser.add_argument('--train_image_folder', type=str, default='train_images_compressed_80', help='training image folder name')
+parser.add_argument('--image_input_size', type=str, default='(256, 256)', help='input image size')
+parser.add_argument('--batch_size', type=int, default=64, help='batch size')
+parser.add_argument('--num_epochs', type=int, default=10, help='number of epochs')
+parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
+# parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
+parser.add_argument('--weight_decay', type=float, default=0.0001, help='weight decay')
+
+
+# In[ ]:
+
+
+setting = None
+try:
+    __IPYTHON__
+    _in_ipython_session = True
+    settings = parser.parse_args("")
+except NameError:
+    _in_ipython_session = False
+    settings = parser.parse_args()
+
+print("settings:", vars(settings))
+# # save settings in to a log file
+# with open(Path(settings.model_dir, settings.experiment_name, 'settings.txt'), 'w') as f:
+#     print(vars(settings), file=f)
+
+
+# In[ ]:
+
+
+image_input_size = eval(settings.image_input_size)
+assert isinstance(image_input_size, tuple) and len(image_input_size) == 2, "image_input_size must be a tuple of length 2"
+# vars(settings)
+# print(image_input_size)
+
+
+# In[ ]:
 
 
 PIL.Image.MAX_IMAGE_PIXELS = 933120000
 # IMAGE_INPUT_SIZE = (2048, 2048)
-IMAGE_INPUT_SIZE = (256, 256)
+
+IMAGE_INPUT_SIZE = image_input_size
 
 
-# In[3]:
+# In[ ]:
 
 
 def create_dir_if_not_exist(dir):
@@ -58,47 +116,60 @@ def create_dir_if_not_exist(dir):
         os.makedirs(dir)
 
 
-# In[4]:
+# In[ ]:
 
 
-SOURCE_DATASET_DIR = "/projectnb/cs640grp/materials/UBC-OCEAN_CS640"
+SOURCE_DATASET_DIR = settings.source_dataset_dir
 # DATASET_PATH = "dataset"
 # TRAIN_IMAGE_FOLDER = "train_images_compressed_80"
 # TEST_IMAGE_FOLDER = "test_images_compressed_80"
-TRAIN_IMAGE_FOLDER = f"img_size_{IMAGE_INPUT_SIZE[0]}x{IMAGE_INPUT_SIZE[1]}"
+# TRAIN_IMAGE_FOLDER = f"img_size_{IMAGE_INPUT_SIZE[0]}x{IMAGE_INPUT_SIZE[1]}"
+TRAIN_IMAGE_FOLDER = settings.train_image_folder
 
 
-LOCAL_DATASET_DIR = "./dataset"
+# LOCAL_DATASET_DIR = "./dataset"
+# MODEL_DIR = "./model/"
+# EXPERIMENT_NAME = "exp_1"
 
-MODEL_DIR = "./model/"
+LOCAL_DATASET_DIR = settings.local_dataset_dir
+MODEL_DIR = settings.model_dir
+EXPERIMENT_NAME = settings.experiment_name
 
-EXPERIMENT_NAME = "exp_1"
 MODEL_SAVE_DIR = Path(MODEL_DIR, EXPERIMENT_NAME)
 RESULT_DIR = Path("./result", EXPERIMENT_NAME)
 
 
 
-# In[5]:
+# In[ ]:
+
+
+# lr = 0.001
+# # momentum = 0.9
+# weight_decay = 0.0001
+# num_epochs = 20
+# batch_size = 32
+
+lr = settings.lr
+# momentum = settings.momentum
+weight_decay = settings.weight_decay
+num_epochs = settings.num_epochs
+batch_size = settings.batch_size
+
+
+# In[ ]:
 
 
 create_dir_if_not_exist(LOCAL_DATASET_DIR)
 
 
-# In[6]:
+# In[ ]:
 
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 print(f'Using {device} for inference')
 
 
-# In[7]:
-
-
-#show Pahtlib  combine two path example
-# print(Path(DATASET_PATH) / "train")
-
-
-# In[8]:
+# In[ ]:
 
 
 #pandas load data from csv
@@ -131,22 +202,14 @@ else:
 
 
 
-# In[9]:
-
-
-# print(train_csv.shape)
-# print(test_csv.shape)
-# print(all_labels.shape)
-
-
-# In[10]:
+# In[ ]:
 
 
 dict_id_to_label = {i: label for i, label in enumerate(all_labels)}
 dict_label_to_id = {label: i for i, label in enumerate(all_labels)}
 
 
-# In[11]:
+# In[ ]:
 
 
 def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to_id):
@@ -163,26 +226,7 @@ def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to
     return x_data
 
 
-# In[12]:
-
-
-# def tran_csv_to_data(x_csv, data_path, image_folder, dict_label_to_id):
-#     x_data = []
-#     for i in range(len(x_csv)):
-#         #get img path
-#         img_name = str(x_csv[i][0]) + ".jpg"
-#         img_path = Path(data_path)  / image_folder / img_name
-#         # check image is exist
-#         if not img_path.exists():
-#             continue
-#         #load image
-#         img = Image.open(img_path)
-
-#         x_data.append([img, dict_label_to_id[x_csv[i][1]]])
-#     return x_data
-
-
-# In[13]:
+# In[ ]:
 
 
 train_image_path_and_label = tran_csv_to_img_path_and_label(train_csv, LOCAL_DATASET_DIR, TRAIN_IMAGE_FOLDER, dict_label_to_id)
@@ -198,21 +242,23 @@ print("valid set size:", len(valid_set))
 # print("test set size:", len(test_set))
 
 
-# In[14]:
+# In[90]:
 
 
-x = Image.open(train_set[0][0])
-plt.imshow(x.resize(IMAGE_INPUT_SIZE))
-# plt.imshow(x.resize((1024, 1024)))
-print(x.size, type(x))
-x = transforms.Resize(IMAGE_INPUT_SIZE)(x)
-print(x.size, type(x))
-x = transforms.ToTensor()(x)
-print(x.shape)
-# x.save("test.jpg")
+def show_img_by_path(img_path):
+    img = Image.open(img_path)
+    plt.imshow(img)
+    plt.show()
+    print(img.size, type(img))
+    img = transforms.Resize(IMAGE_INPUT_SIZE)(img)
+    print(img.size, type(img))
+    img = transforms.ToTensor()(img)
+    print(img.shape)
+    
+# show_img_by_path(train_set[0][0])
 
 
-# In[15]:
+# In[ ]:
 
 
 from torchvision.io import read_image
@@ -239,16 +285,7 @@ class UBCDataset(Dataset):
         return image, label
 
 
-# In[16]:
-
-
-# # put data into UBCDataset
-# train_dataset = UBCDataset(train_set, transform=transforms.ToTensor())
-# valid_dataset = UBCDataset(valid_set, transform=transforms.ToTensor())
-# test_dataset = UBCDataset(test_set, transform=transforms.ToTensor())
-
-
-# In[17]:
+# In[ ]:
 
 
 # put data into dataloader
@@ -273,26 +310,29 @@ valid_dataset = UBCDataset(valid_set, transform=test_transform)
 
 
 
-# In[18]:
+# In[ ]:
 
 
-train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=0)
-valid_dataloader = DataLoader(valid_dataset, batch_size=32, shuffle=False, num_workers=0)
-# test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=0)
+train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+# test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
 
 
-# In[19]:
+# In[94]:
 
 
-for imgs, labels in train_dataloader:
-    break
-print(labels)
-print(imgs.shape)
-image_grid = torchvision.utils.make_grid(imgs, nrow=8)
-plt.imshow(image_grid.permute(1, 2, 0).numpy())
+#show image grid
+def show_image_grid(dataloader, num_of_images=16):
+    imgs, labels = next(iter(dataloader))
+    image_grid = torchvision.utils.make_grid(imgs[:num_of_images], nrow=8)
+    plt.imshow(image_grid.permute(1, 2, 0).numpy())
+    # plt.show()
+    print("labels:", labels[:num_of_images], [dict_id_to_label[label.item()] for label in labels[:num_of_images]])
+
+# show_image_grid(train_dataloader)
 
 
-# In[26]:
+# In[ ]:
 
 
 efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
@@ -302,7 +342,7 @@ utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_convnets_
 # vars(efficientnet)
 
 
-# In[27]:
+# In[ ]:
 
 
 model_raw = efficientnet
@@ -315,25 +355,21 @@ model_raw.classifier = torch.nn.Sequential(
 model_raw = model_raw.to(device)
 
 
-# In[28]:
+# In[ ]:
 
 
 summary(model_raw, (3, ) + IMAGE_INPUT_SIZE, device=device.type)
 
 
-# In[29]:
+# In[ ]:
 
 
-lr = 0.001
-# momentum = 0.9
-weight_decay = 0.0001
-num_epochs = 20
 criteria = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model_raw.parameters(), lr=lr, weight_decay=weight_decay)
 
 
 
-# In[30]:
+# In[ ]:
 
 
 def eval(model, valid_dataloader, criteria, device):
@@ -359,7 +395,7 @@ def eval(model, valid_dataloader, criteria, device):
         return valid_loss, valid_acc
 
 
-# In[31]:
+# In[112]:
 
 
 def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, device):
@@ -369,9 +405,11 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
     valid_acc_list = []
 
     best_valid_loss = float('inf')
-    best_valid_acc = 0.0
+    best_valid_acc = -0.0001
     best_model_valid_loss = None
     best_model_valid_acc = None
+
+    start_time = time.time()
 
     for epoch in range(num_epochs):
         print(f'Epoch {epoch + 1}/{num_epochs}')
@@ -403,6 +441,8 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
         train_acc_list.append(train_acc)
 
         print(f'Train loss: {train_loss:.4f} Acc: {train_acc:.4f}')
+        elapsed_time = time.time() - start_time
+        print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
         valid_loss, valid_acc = eval(model, valid_dataloader, criteria, device)
 
@@ -418,12 +458,14 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
             best_model_valid_acc = copy.deepcopy(model)
 
         print(f'Valid loss: {valid_loss:.4f} Acc: {valid_acc:.4f}')
+        elapsed_time = time.time() - start_time
+        print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
     return model, best_model_valid_acc, best_model_valid_loss, \
            train_loss_list, train_acc_list, valid_loss_list, valid_acc_list
 
 
-# In[32]:
+# In[ ]:
 
 
 def store_result(best_model_valid_acc, best_model_valid_loss, train_loss_list, train_acc_list, valid_loss_list, valid_acc_list):
@@ -443,7 +485,7 @@ def store_result(best_model_valid_acc, best_model_valid_loss, train_loss_list, t
         pickle.dump(valid_acc_list, f)
 
 
-# In[33]:
+# In[ ]:
 
 
 def plot_train_eval_result(train_loss_list, train_acc_list, valid_loss_list, valid_acc_list):
@@ -469,7 +511,7 @@ def plot_train_eval_result(train_loss_list, train_acc_list, valid_loss_list, val
     plt.tight_layout()
 
 
-# In[34]:
+# In[113]:
 
 
 model_trained, best_model_valid_acc, best_model_valid_loss, \
