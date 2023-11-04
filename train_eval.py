@@ -185,8 +185,8 @@ def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to
 # In[44]:
 
 
-train_image_path_and_label = tran_csv_to_img_path_and_label(train_csv, DATASET_PATH, TRAIN_IMAGE_FOLDER, dict_label_to_id)
-# test_image_path_and_label = tran_csv_to_img_path_and_label(test_csv, DATASET_PATH, TEST_IMAGE_FOLDER, dict_label_to_id)
+train_image_path_and_label = tran_csv_to_img_path_and_label(train_csv, LOCAL_DATASET_DIR, TRAIN_IMAGE_FOLDER, dict_label_to_id)
+# test_image_path_and_label = tran_csv_to_img_path_and_label(test_csv, LOCAL_DATASET_DIR, TEST_IMAGE_FOLDER, dict_label_to_id)
 
 # Random split
 train_set, valid_set = train_test_split(train_image_path_and_label, test_size=0.2, random_state=42)
