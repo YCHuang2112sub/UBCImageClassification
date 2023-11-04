@@ -38,7 +38,10 @@ for key, value_list in setting_param_multi_combination_dict.items():
     list_command_tmp = []
     for value in value_list:
         for command_line_args in list_of_command_line_args:
-            list_command_tmp.append(f"{command_line_args} --{key} {value}")
+            if type(value) == str:
+                list_command_tmp.append(f"{command_line_args} --{key} \"{value}\"")
+            else:
+                list_command_tmp.append(f"{command_line_args} --{key} {value}")
     list_of_command_line_args = list_command_tmp
         
 
