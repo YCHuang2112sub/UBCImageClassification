@@ -7,7 +7,7 @@
 
 
 
-# In[65]:
+# In[95]:
 
 
 import torch
@@ -42,7 +42,7 @@ from tqdm.notebook import tqdm
 
 
 
-# In[66]:
+# In[96]:
 
 
 PIL.Image.MAX_IMAGE_PIXELS = 933120000
@@ -50,7 +50,7 @@ PIL.Image.MAX_IMAGE_PIXELS = 933120000
 IMAGE_INPUT_SIZE = (256, 256)
 
 
-# In[67]:
+# In[97]:
 
 
 def create_dir_if_not_exist(dir):
@@ -58,7 +58,7 @@ def create_dir_if_not_exist(dir):
         os.makedirs(dir)
 
 
-# In[68]:
+# In[98]:
 
 
 SOURCE_DATASET_DIR = "/projectnb/cs640grp/materials/UBC-OCEAN_CS640"
@@ -78,27 +78,27 @@ RESULT_DIR = Path("./result", EXPERIMENT_NAME)
 
 
 
-# In[69]:
+# In[99]:
 
 
 create_dir_if_not_exist(LOCAL_DATASET_DIR)
 
 
-# In[70]:
+# In[100]:
 
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 print(f'Using {device} for inference')
 
 
-# In[71]:
+# In[101]:
 
 
 #show Pahtlib  combine two path example
 # print(Path(DATASET_PATH) / "train")
 
 
-# In[72]:
+# In[102]:
 
 
 #pandas load data from csv
@@ -131,7 +131,7 @@ else:
 
 
 
-# In[73]:
+# In[103]:
 
 
 # print(train_csv.shape)
@@ -139,14 +139,14 @@ else:
 # print(all_labels.shape)
 
 
-# In[74]:
+# In[104]:
 
 
 dict_id_to_label = {i: label for i, label in enumerate(all_labels)}
 dict_label_to_id = {label: i for i, label in enumerate(all_labels)}
 
 
-# In[75]:
+# In[105]:
 
 
 def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to_id):
@@ -163,7 +163,7 @@ def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to
     return x_data
 
 
-# In[76]:
+# In[106]:
 
 
 # def tran_csv_to_data(x_csv, data_path, image_folder, dict_label_to_id):
@@ -182,7 +182,7 @@ def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to
 #     return x_data
 
 
-# In[77]:
+# In[107]:
 
 
 train_image_path_and_label = tran_csv_to_img_path_and_label(train_csv, LOCAL_DATASET_DIR, TRAIN_IMAGE_FOLDER, dict_label_to_id)
@@ -198,7 +198,7 @@ print("valid set size:", len(valid_set))
 # print("test set size:", len(test_set))
 
 
-# In[78]:
+# In[108]:
 
 
 x = Image.open(train_set[0][0])
@@ -212,7 +212,7 @@ print(x.shape)
 # x.save("test.jpg")
 
 
-# In[79]:
+# In[109]:
 
 
 from torchvision.io import read_image
@@ -239,7 +239,7 @@ class UBCDataset(Dataset):
         return image, label
 
 
-# In[80]:
+# In[110]:
 
 
 # # put data into UBCDataset
@@ -248,7 +248,7 @@ class UBCDataset(Dataset):
 # test_dataset = UBCDataset(test_set, transform=transforms.ToTensor())
 
 
-# In[81]:
+# In[111]:
 
 
 # put data into dataloader
@@ -273,7 +273,7 @@ valid_dataset = UBCDataset(valid_set, transform=test_transform)
 
 
 
-# In[82]:
+# In[112]:
 
 
 train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=0)
@@ -281,7 +281,7 @@ valid_dataloader = DataLoader(valid_dataset, batch_size=32, shuffle=False, num_w
 # test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=0)
 
 
-# In[83]:
+# In[113]:
 
 
 for imgs, labels in train_dataloader:
@@ -292,7 +292,7 @@ image_grid = torchvision.utils.make_grid(imgs, nrow=8)
 plt.imshow(image_grid.permute(1, 2, 0).numpy())
 
 
-# In[84]:
+# In[114]:
 
 
 class UBC_CNN_MODEL(nn.Module):
@@ -381,8 +381,9 @@ class UBC_CNN_MODEL(nn.Module):
         x4 = torch.flatten(x3, 1)
         # print(x4.shape)
         if(self.first_pass == True):
+            self.fc1 = nn.Linear(x4.shape[1],64)
             if(x4.get_device() != -1):
-                self.fc1 = nn.Linear(x4.shape[1],64).to(x4.get_device())
+                self.fc1 = self.fc1.to(x4.get_device())
         x4 = self.fc1(x4)
         x4 = self.relu(x4)
         x4 = self.fc2(x4)
@@ -394,19 +395,19 @@ class UBC_CNN_MODEL(nn.Module):
         return x4
 
 
-# In[85]:
+# In[115]:
 
 
 ubc_cnn_model = UBC_CNN_MODEL(output_dim=5).to(device)
 
 
-# In[86]:
+# In[116]:
 
 
 summary(ubc_cnn_model, (3, ) + IMAGE_INPUT_SIZE, device=device.type)
 
 
-# In[87]:
+# In[117]:
 
 
 lr = 0.001
@@ -418,7 +419,7 @@ optimizer = optim.Adam(ubc_cnn_model.parameters(), lr=lr, weight_decay=weight_de
 
 
 
-# In[88]:
+# In[118]:
 
 
 def eval(model, valid_dataloader, criteria, device):
@@ -444,7 +445,7 @@ def eval(model, valid_dataloader, criteria, device):
         return valid_loss, valid_acc
 
 
-# In[89]:
+# In[119]:
 
 
 def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, device):
@@ -508,7 +509,7 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
            train_loss_list, train_acc_list, valid_loss_list, valid_acc_list
 
 
-# In[90]:
+# In[120]:
 
 
 def store_result(best_model_valid_acc, best_model_valid_loss, train_loss_list, train_acc_list, valid_loss_list, valid_acc_list):
@@ -528,7 +529,7 @@ def store_result(best_model_valid_acc, best_model_valid_loss, train_loss_list, t
         pickle.dump(valid_acc_list, f)
 
 
-# In[91]:
+# In[121]:
 
 
 def plot_train_eval_result(train_loss_list, train_acc_list, valid_loss_list, valid_acc_list):
@@ -554,7 +555,7 @@ def plot_train_eval_result(train_loss_list, train_acc_list, valid_loss_list, val
     plt.tight_layout()
 
 
-# In[92]:
+# In[122]:
 
 
 model_trained, best_model_valid_acc, best_model_valid_loss, \
