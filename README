@@ -1,0 +1,14 @@
+Install Requirement:
+    pip install -r requirements.txt
+
+Training and Evaluation:
+    see train_eval.ipynb
+
+Resizing Dataset Images:
+    see resize_dataset_image.py
+
+ToDo list:
+[] Add Argparse to resizing_dataset_image.py and train_eval.ipynb
+[] Try Efficient Net
+[] Try CS640 Network
+[] Try Unet + Transformer
