@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[6]:
+# In[41]:
 
 
 # !python script.py
 
 
-# In[95]:
+# In[42]:
 
 
 import torch
@@ -43,9 +43,10 @@ import validators
 
 import argparse
 import re
+from collections import Counter
 
 
-# In[ ]:
+# In[43]:
 
 
 ## using argparse to set parameters
@@ -63,9 +64,10 @@ parser.add_argument('--num_epochs', type=int, default=10, help='number of epochs
 parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
 # parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
 parser.add_argument('--weight_decay', type=float, default=0.0001, help='weight decay')
+parser.add_argument('--eval_patience', type=int, default=20, help='patience for early stopping')
 
 
-# In[ ]:
+# In[44]:
 
 
 setting = None
@@ -83,7 +85,7 @@ print("settings:", vars(settings))
 #     print(vars(settings), file=f)
 
 
-# In[ ]:
+# In[45]:
 
 
 image_input_size = eval(settings.image_input_size)
@@ -92,7 +94,7 @@ assert isinstance(image_input_size, tuple) and len(image_input_size) == 2, "imag
 # print(image_input_size)
 
 
-# In[96]:
+# In[46]:
 
 
 PIL.Image.MAX_IMAGE_PIXELS = 933120000
@@ -100,7 +102,7 @@ PIL.Image.MAX_IMAGE_PIXELS = 933120000
 IMAGE_INPUT_SIZE = (256, 256)
 
 
-# In[97]:
+# In[47]:
 
 
 def create_dir_if_not_exist(dir):
@@ -108,7 +110,7 @@ def create_dir_if_not_exist(dir):
         os.makedirs(dir)
 
 
-# In[98]:
+# In[59]:
 
 
 SOURCE_DATASET_DIR = settings.source_dataset_dir
@@ -128,11 +130,13 @@ MODEL_DIR = settings.model_dir
 EXPERIMENT_NAME = settings.experiment_name
 
 MODEL_SAVE_DIR = Path(MODEL_DIR, EXPERIMENT_NAME)
-RESULT_DIR = Path("./result", EXPERIMENT_NAME)
+sub_folder_name = f"lr_{settings.lr}__batch_size_{settings.batch_size}__num_epochs_{settings.num_epochs}__weight_decay_{settings.weight_decay}__eval_patience_{settings.eval_patience}"
+sub_folder_name = re.sub(r"\.", "p", sub_folder_name)
+RESULT_DIR = Path("./result", EXPERIMENT_NAME, sub_folder_name)
+print("RESULT_DIR:", RESULT_DIR)
 
 
-
-# In[ ]:
+# In[49]:
 
 
 # lr = 0.001
@@ -141,6 +145,7 @@ RESULT_DIR = Path("./result", EXPERIMENT_NAME)
 # num_epochs = 20
 # batch_size = 32
 
+eval_patience = settings.eval_patience
 lr = settings.lr
 # momentum = settings.momentum
 weight_decay = settings.weight_decay
@@ -148,27 +153,27 @@ num_epochs = settings.num_epochs
 batch_size = settings.batch_size
 
 
-# In[99]:
+# In[50]:
 
 
 create_dir_if_not_exist(LOCAL_DATASET_DIR)
 
 
-# In[100]:
+# In[51]:
 
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 print(f'Using {device} for inference')
 
 
-# In[101]:
+# In[52]:
 
 
 #show Pahtlib  combine two path example
 # print(Path(DATASET_PATH) / "train")
 
 
-# In[102]:
+# In[53]:
 
 
 #pandas load data from csv
@@ -201,7 +206,7 @@ else:
 
 
 
-# In[103]:
+# In[54]:
 
 
 # print(train_csv.shape)
@@ -209,14 +214,14 @@ else:
 # print(all_labels.shape)
 
 
-# In[104]:
+# In[55]:
 
 
 dict_id_to_label = {i: label for i, label in enumerate(all_labels)}
 dict_label_to_id = {label: i for i, label in enumerate(all_labels)}
 
 
-# In[105]:
+# In[56]:
 
 
 def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to_id):
@@ -233,7 +238,7 @@ def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to
     return x_data
 
 
-# In[106]:
+# In[57]:
 
 
 # def tran_csv_to_data(x_csv, data_path, image_folder, dict_label_to_id):
@@ -252,14 +257,15 @@ def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to
 #     return x_data
 
 
-# In[107]:
+# In[58]:
 
 
 train_image_path_and_label = tran_csv_to_img_path_and_label(train_csv, LOCAL_DATASET_DIR, TRAIN_IMAGE_FOLDER, dict_label_to_id)
 # test_image_path_and_label = tran_csv_to_img_path_and_label(test_csv, LOCAL_DATASET_DIR, TEST_IMAGE_FOLDER, dict_label_to_id)
 
 # Random split
-train_set, valid_set = train_test_split(train_image_path_and_label, test_size=0.2, random_state=42)
+train_set, valid_set = train_test_split(train_image_path_and_label, test_size=0.2, random_state=42, 
+                                        stratify=[x[1] for x in train_image_path_and_label])
 # test_set = test_image_path_and_label
 
 
@@ -267,8 +273,14 @@ print("train set size:", len(train_set))
 print("valid set size:", len(valid_set))
 # print("test set size:", len(test_set))
 
+path_list, labels = zip(*train_set)
+print("train set category distribution: \n\t", Counter(labels))
 
-# In[108]:
+path_list, labels = zip(*valid_set)
+print("train set category distribution: \n\t", Counter(labels))
+
+
+# In[ ]:
 
 
 x = Image.open(train_set[0][0])
@@ -282,7 +294,7 @@ print(x.shape)
 # x.save("test.jpg")
 
 
-# In[109]:
+# In[ ]:
 
 
 from torchvision.io import read_image
@@ -309,7 +321,7 @@ class UBCDataset(Dataset):
         return image, label
 
 
-# In[110]:
+# In[ ]:
 
 
 # # put data into UBCDataset
@@ -318,7 +330,7 @@ class UBCDataset(Dataset):
 # test_dataset = UBCDataset(test_set, transform=transforms.ToTensor())
 
 
-# In[111]:
+# In[ ]:
 
 
 # put data into dataloader
@@ -343,7 +355,7 @@ valid_dataset = UBCDataset(valid_set, transform=test_transform)
 
 
 
-# In[112]:
+# In[ ]:
 
 
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
@@ -351,7 +363,7 @@ valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=Fals
 # test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
 
 
-# In[113]:
+# In[ ]:
 
 
 for imgs, labels in train_dataloader:
@@ -362,7 +374,7 @@ image_grid = torchvision.utils.make_grid(imgs, nrow=8)
 plt.imshow(image_grid.permute(1, 2, 0).numpy())
 
 
-# In[114]:
+# In[ ]:
 
 
 class UBC_CNN_MODEL(nn.Module):
@@ -465,19 +477,19 @@ class UBC_CNN_MODEL(nn.Module):
         return x4
 
 
-# In[115]:
+# In[ ]:
 
 
 ubc_cnn_model = UBC_CNN_MODEL(output_dim=5).to(device)
 
 
-# In[116]:
+# In[ ]:
 
 
 summary(ubc_cnn_model, (3, ) + IMAGE_INPUT_SIZE, device=device.type)
 
 
-# In[117]:
+# In[ ]:
 
 
 criteria = nn.CrossEntropyLoss()
@@ -485,7 +497,7 @@ optimizer = optim.Adam(ubc_cnn_model.parameters(), lr=lr, weight_decay=weight_de
 
 
 
-# In[118]:
+# In[ ]:
 
 
 def eval(model, valid_dataloader, criteria, device):
@@ -511,10 +523,10 @@ def eval(model, valid_dataloader, criteria, device):
         return valid_loss, valid_acc
 
 
-# In[119]:
+# In[ ]:
 
 
-def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, device):
+def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device):
     train_loss_list = []
     train_acc_list = []
     valid_loss_list = []
@@ -526,6 +538,8 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
     best_model_valid_acc = None
 
     start_time = time.time()
+
+    counter_eval_not_improve = 0
 
     for epoch in range(num_epochs):
         print(f'Epoch {epoch + 1}/{num_epochs}')
@@ -572,16 +586,23 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
         if valid_acc > best_valid_acc:
             best_valid_acc = valid_acc
             best_model_valid_acc = copy.deepcopy(model)
+        else:
+            counter_eval_not_improve += 1
+
 
         print(f'Valid loss: {valid_loss:.4f} Acc: {valid_acc:.4f}')
         elapsed_time = time.time() - start_time
         print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
+        if counter_eval_not_improve >= eval_patience:
+            print(f'Early stopping at epoch {epoch + 1}')
+            break
+
     return model, best_model_valid_acc, best_model_valid_loss, \
            train_loss_list, train_acc_list, valid_loss_list, valid_acc_list
 
 
-# In[120]:
+# In[ ]:
 
 
 def store_result(best_model_valid_acc, best_model_valid_loss, train_loss_list, train_acc_list, valid_loss_list, valid_acc_list):
@@ -601,7 +622,7 @@ def store_result(best_model_valid_acc, best_model_valid_loss, train_loss_list, t
         pickle.dump(valid_acc_list, f)
 
 
-# In[121]:
+# In[ ]:
 
 
 def plot_train_eval_result(train_loss_list, train_acc_list, valid_loss_list, valid_acc_list):
@@ -627,12 +648,12 @@ def plot_train_eval_result(train_loss_list, train_acc_list, valid_loss_list, val
     plt.tight_layout()
 
 
-# In[122]:
+# In[ ]:
 
 
 model_trained, best_model_valid_acc, best_model_valid_loss, \
 train_loss_list, train_acc_list, valid_loss_list, valid_acc_list = \
-train(ubc_cnn_model, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, device)
+train(ubc_cnn_model, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device)
 
 
 
