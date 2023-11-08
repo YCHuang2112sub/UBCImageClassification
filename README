@@ -22,6 +22,7 @@ ToDo list:
 [x] stratified when splitting dataset into train and val
 [x] add early stopping + patience variable
 [x] + plot_result.ipynb
+[] + N_EPOCH_FOR_GRADIENT_ACCUMULATION
 [] Try Efficient Net
 [] Try CS640 Network
 [] Try Unet + Transformer
