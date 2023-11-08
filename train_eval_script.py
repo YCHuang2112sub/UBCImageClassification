@@ -49,15 +49,17 @@ for key, value_list in setting_param_multi_combination_dict.items():
         
 
 # print command
-print(f"python {run_file_name} {command_line_args}")
+# print(f"python {run_file_name} {command_line_args}")
 
-# # print list of command
-# for command_line_args_tmp in list_of_command_line_args:
-#     print(f"python {run_file_name} {command_line_args_tmp}")
+# print list of command
+for command_line_args_tmp in list_of_command_line_args:
+    print(f"python {run_file_name} {command_line_args_tmp}")
 
+print("\n\n\n\n\n")
 # run command
-subprocess.run(f"python {run_file_name} {command_line_args}", shell=True)
+# subprocess.run(f"python {run_file_name} {command_line_args}", shell=True)
 
-# # run list of command
-# for command_line_args_tmp in list_of_command_line_args:
-#     subprocess.run(f"python {run_file_name} {command_line_args_tmp}", shell=True)
+# run list of command
+for command_line_args_tmp in list_of_command_line_args:
+    print(f"python {run_file_name} {command_line_args_tmp}")
+    subprocess.run(f"python {run_file_name} {command_line_args_tmp}", shell=True)
