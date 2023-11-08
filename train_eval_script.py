@@ -1,27 +1,30 @@
 import subprocess
 
 #set parameters
-run_file_name = "train_eval.py"
-# run_file_name = "train_eval_efficient_net.py"
+#run_file_name = "train_eval.py"
+run_file_name = "train_eval_efficient_net.py"
 
 setting_param_dict = {
     # "source_dataset_dir": "./dataset",
     "source_dataset_dir": "/projectnb/cs640grp/materials/UBC-OCEAN_CS640",
     "local_dataset_dir": "./dataset",
     "model_dir": "./model",
-    "experiment_name": "exp_1",
+    #"experiment_name": "exp_1",
     "train_image_folder": "img_size_256x256",
     # "train_image_folder": "train_images_compressed_80",
-    "image_input_size": "(256, 256)",
+    #"image_input_size": "(256, 256)",
     "batch_size": 32,
     "num_epochs": 20,
     # "lr": 0.001,
     # --weight_decay: 0.0001
+    "eval_patience": 50,
 } 
 
-setting_param_multi_combination_dict = {
-    "lr": [0.001, 0.0001],
-    "weight_decay": [0.0001, 0.00001]
+setting_param_multi_combination_dict = {    
+    "image_input_size": ["(256, 256)", "(512, 512)", "(1024, 1024)", "(2048, 2048)"],
+    "experiment_name": ["efficientnet_b0", "efficientnet_b7", "efficientnet_v2_l" ],
+    # "lr": [0.001, 0.0001],
+    # "weight_decay": [0.0001, 0.00001]
 }
 
 

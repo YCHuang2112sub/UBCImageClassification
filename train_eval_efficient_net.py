@@ -347,6 +347,14 @@ def show_image_grid(dataloader, num_of_images=16):
 
 
 efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
+
+if EXPERIMENT_NAME == "efficientnet_b0":
+    efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
+elif EXPERIMENT_NAME == "efficientnet_b7":
+    efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b7', pretrained=True)
+elif EXPERIMENT_NAME == "efficientnet_v2_l":
+    efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_v2_l', pretrained=True)
+
 utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_convnets_processing_utils')
 
 # efficientnet.eval().to(device)
