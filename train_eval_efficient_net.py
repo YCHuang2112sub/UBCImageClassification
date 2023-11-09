@@ -136,9 +136,9 @@ LOCAL_DATASET_DIR = settings.local_dataset_dir
 MODEL_DIR = settings.model_dir
 EXPERIMENT_NAME = settings.experiment_name
 
-MODEL_SAVE_DIR = Path(MODEL_DIR, EXPERIMENT_NAME)
 sub_folder_name = f"lr_{settings.lr}__batch_size_{settings.batch_size}__num_epochs_{settings.num_epochs}__weight_decay_{settings.weight_decay}__eval_patience_{settings.eval_patience}"
 sub_folder_name = re.sub(r"\.", "p", sub_folder_name)
+MODEL_SAVE_DIR = Path(MODEL_DIR, EXPERIMENT_NAME, sub_folder_name)
 RESULT_DIR = Path("./result", EXPERIMENT_NAME, sub_folder_name)
 print("RESULT_DIR:", RESULT_DIR)
 
