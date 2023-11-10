@@ -1,5 +1,6 @@
 dataset*
 model*
 result*
+run/*
 *.png
 *.jpg

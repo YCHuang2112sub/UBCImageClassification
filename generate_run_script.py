@@ -97,6 +97,8 @@ with open(Path(RUNNING_DIR, "run.sh"), "w") as f:
     for i, command_line_args_tmp in  enumerate(list_of_command_line_args):
         f.write(f"qsub run_exp{i:02}.sh\n")
 
+#chmod 777 all file under running dir
+subprocess.run(f"chmod 777 {RUNNING_DIR}/*", shell=True)
 
 
 print("\n\n\n\n\n")
