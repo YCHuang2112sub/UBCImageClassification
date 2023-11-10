@@ -7,7 +7,7 @@
 # !python script.py
 
 
-# In[2]:
+# In[1]:
 
 
 import torch
@@ -52,7 +52,7 @@ from collections import Counter
 
 
 
-# In[3]:
+# In[2]:
 
 
 ## using argparse to set parameters
@@ -73,7 +73,7 @@ parser.add_argument('--weight_decay', type=float, default=0.0001, help='weight d
 parser.add_argument('--eval_patience', type=int, default=20, help='patience for early stopping')
 
 
-# In[4]:
+# In[3]:
 
 
 setting = None
@@ -91,7 +91,7 @@ print("settings:", vars(settings))
 #     print(vars(settings), file=f)
 
 
-# In[5]:
+# In[4]:
 
 
 image_input_size = eval(settings.image_input_size)
@@ -100,7 +100,7 @@ assert isinstance(image_input_size, tuple) and len(image_input_size) == 2, "imag
 # print(image_input_size)
 
 
-# In[6]:
+# In[5]:
 
 
 PIL.Image.MAX_IMAGE_PIXELS = 933120000
@@ -109,7 +109,7 @@ PIL.Image.MAX_IMAGE_PIXELS = 933120000
 IMAGE_INPUT_SIZE = image_input_size
 
 
-# In[7]:
+# In[6]:
 
 
 def create_dir_if_not_exist(dir):
@@ -117,7 +117,7 @@ def create_dir_if_not_exist(dir):
         os.makedirs(dir)
 
 
-# In[18]:
+# In[7]:
 
 
 SOURCE_DATASET_DIR = settings.source_dataset_dir
@@ -136,14 +136,14 @@ LOCAL_DATASET_DIR = settings.local_dataset_dir
 MODEL_DIR = settings.model_dir
 EXPERIMENT_NAME = settings.experiment_name
 
-sub_folder_name = f"lr_{settings.lr}__batch_size_{settings.batch_size}__num_epochs_{settings.num_epochs}__weight_decay_{settings.weight_decay}__eval_patience_{settings.eval_patience}"
+sub_folder_name = f"img_size_{IMAGE_INPUT_SIZE[0]}x{IMAGE_INPUT_SIZE[1]}_lr_{settings.lr}__batch_size_{settings.batch_size}__num_epochs_{settings.num_epochs}__weight_decay_{settings.weight_decay}__eval_patience_{settings.eval_patience}"
 sub_folder_name = re.sub(r"\.", "p", sub_folder_name)
 MODEL_SAVE_DIR = Path(MODEL_DIR, EXPERIMENT_NAME, sub_folder_name)
 RESULT_DIR = Path("./result", EXPERIMENT_NAME, sub_folder_name)
 print("RESULT_DIR:", RESULT_DIR)
 
 
-# In[9]:
+# In[8]:
 
 
 # lr = 0.001
@@ -160,20 +160,20 @@ num_epochs = settings.num_epochs
 batch_size = settings.batch_size
 
 
-# In[10]:
+# In[9]:
 
 
 create_dir_if_not_exist(LOCAL_DATASET_DIR)
 
 
-# In[11]:
+# In[10]:
 
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 print(f'Using {device} for inference')
 
 
-# In[12]:
+# In[11]:
 
 
 #pandas load data from csv
@@ -343,7 +343,13 @@ def show_image_grid(dataloader, num_of_images=16):
 # show_image_grid(train_dataloader)
 
 
-# In[ ]:
+# In[13]:
+
+
+efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_v2_l', pretrained=True)
+
+
+# In[12]:
 
 
 efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
