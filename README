@@ -5,8 +5,14 @@ Run Script:
     i) resize dataset images
         python downscale_image_script.py
 
-    ii) train and evaluate
-        python train_eval_script.py
+    ii) generate training script
+        python getnerate_run_script.py
+
+    iii) run train_eval script
+         inside ./run folder, run `bash run.sh`
+
+    iv) plot result
+        python plot_result.py
 
 Training and Evaluation:
     see train_eval.ipynb
