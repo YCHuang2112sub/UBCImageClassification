@@ -206,14 +206,14 @@ else:
 
 
 
-# In[13]:
+# In[12]:
 
 
 dict_id_to_label = {i: label for i, label in enumerate(all_labels)}
 dict_label_to_id = {label: i for i, label in enumerate(all_labels)}
 
 
-# In[14]:
+# In[13]:
 
 
 def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to_id):
@@ -230,13 +230,14 @@ def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to
     return x_data
 
 
-# In[15]:
+# In[14]:
 
 
 train_image_path_and_label = tran_csv_to_img_path_and_label(train_csv, LOCAL_DATASET_DIR, TRAIN_IMAGE_FOLDER, dict_label_to_id)
 # test_image_path_and_label = tran_csv_to_img_path_and_label(test_csv, LOCAL_DATASET_DIR, TEST_IMAGE_FOLDER, dict_label_to_id)
 
 # Random split
+# train_set, valid_set = train_test_split(train_image_path_and_label, test_size=0.2, random_state=42)
 train_set, valid_set = train_test_split(train_image_path_and_label, test_size=0.2, random_state=42, 
                                         stratify=[x[1] for x in train_image_path_and_label])
 # test_set = test_image_path_and_label
@@ -253,7 +254,7 @@ path_list, labels = zip(*valid_set)
 print("train set category distribution: \n\t", Counter(labels))
 
 
-# In[ ]:
+# In[15]:
 
 
 def show_img_by_path(img_path):
@@ -269,7 +270,7 @@ def show_img_by_path(img_path):
 # show_img_by_path(train_set[0][0])
 
 
-# In[ ]:
+# In[16]:
 
 
 from torchvision.io import read_image
@@ -296,7 +297,7 @@ class UBCDataset(Dataset):
         return image, label
 
 
-# In[ ]:
+# In[17]:
 
 
 # put data into dataloader
@@ -321,7 +322,7 @@ valid_dataset = UBCDataset(valid_set, transform=test_transform)
 
 
 
-# In[ ]:
+# In[18]:
 
 
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
@@ -329,7 +330,7 @@ valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=Fals
 # test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
 
 
-# In[ ]:
+# In[19]:
 
 
 #show image grid
@@ -343,23 +344,34 @@ def show_image_grid(dataloader, num_of_images=16):
 # show_image_grid(train_dataloader)
 
 
-# In[13]:
+# In[31]:
 
 
-efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_v2_l', pretrained=True)
+# efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_v2_l', pretrained=True)
+# efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
+# efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b4', pretrained=True)
+# efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_widese_b0', pretrained=True)
+# efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_widese_b4', pretrained=True)
+
+# print(dir(efficientnet.modules))
+# print(efficientnet.classifier.fc.in_features)
 
 
-# In[12]:
+# In[54]:
 
 
 efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
 
 if EXPERIMENT_NAME == "efficientnet_b0":
     efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
-elif EXPERIMENT_NAME == "efficientnet_b7":
-    efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b7', pretrained=True)
-elif EXPERIMENT_NAME == "efficientnet_v2_l":
-    efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_v2_l', pretrained=True)
+elif EXPERIMENT_NAME == "efficientnet_b4":
+    efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b4', pretrained=True)
+elif EXPERIMENT_NAME == "efficientnet_widese_b0":
+    efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_widese_b0', pretrained=True)
+elif EXPERIMENT_NAME == "efficientnet_widese_b4":
+    efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_widese_b4', pretrained=True)
+# elif EXPERIMENT_NAME == "efficientnet_v2_l":
+#     efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_v2_l', pretrained=True)
 
 utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_convnets_processing_utils')
 
@@ -367,20 +379,21 @@ utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_convnets_
 # vars(efficientnet)
 
 
-# In[ ]:
+# In[32]:
 
 
 model_raw = efficientnet
+classifier_in_feature_size = model_raw.classifier.fc.in_features
 model_raw.classifier = torch.nn.Sequential(
     torch.nn.AdaptiveAvgPool2d(output_size=1),
     torch.nn.Flatten(),
     torch.nn.Dropout(p=0.2, inplace=False),
-    torch.nn.Linear(in_features=1280, out_features=1000, bias=True)
+    torch.nn.Linear(in_features=classifier_in_feature_size, out_features=1000, bias=True)
 )
 model_raw = model_raw.to(device)
 
 
-# In[ ]:
+# In[33]:
 
 
 summary(model_raw, (3, ) + IMAGE_INPUT_SIZE, device=device.type)
