@@ -405,7 +405,7 @@ summary(model_raw, (3, ) + IMAGE_INPUT_SIZE, device=device.type)
 
 
 criteria = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model_raw.parameters(), lr=lr, weight_decay=weight_decay)
+optimizer = optim.Adam(model_raw.classifier.parameters(), lr=lr, weight_decay=weight_decay)
 
 
 
