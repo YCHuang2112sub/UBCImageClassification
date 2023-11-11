@@ -605,7 +605,7 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
         train_acc_list.append(train_acc)
         train_balanced_acc_list.append(train_balanced_acc)
 
-        print(f'Train loss: {train_loss:.4f} Acc: {train_acc:.4f}')
+        print(f'Train loss: {train_loss:.4f} Acc: {train_acc:.4f} Balanced Acc: {train_balanced_acc:.4f}')
         elapsed_time = time.time() - start_time
         print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
@@ -632,7 +632,7 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
             counter_eval_not_improve += 1
 
 
-        print(f'Valid loss: {valid_loss:.4f} Acc: {valid_acc:.4f}')
+        print(f'Valid loss: {valid_loss:.4f} Acc: {valid_acc:.4f} Balanced Acc: {valid_balanced_acc:.4f}')
         elapsed_time = time.time() - start_time
         print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
