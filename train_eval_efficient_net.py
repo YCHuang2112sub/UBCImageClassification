@@ -7,7 +7,7 @@
 # !python script.py
 
 
-# In[1]:
+# In[127]:
 
 
 import torch
@@ -35,6 +35,8 @@ import pickle
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
+from sklearn.metrics import balanced_accuracy_score
+
 
 from pathlib import Path
 from collections import defaultdict
@@ -46,7 +48,7 @@ import re
 from collections import Counter
 
 
-# In[35]:
+# In[128]:
 
 
 print("number_of_cpus: ", torch.get_num_threads())
@@ -54,7 +56,7 @@ torch.set_num_threads(16)
 print("confined to number_of_cpus: ", torch.get_num_threads())
 
 
-# In[2]:
+# In[129]:
 
 
 ## using argparse to set parameters
@@ -75,7 +77,7 @@ parser.add_argument('--weight_decay', type=float, default=0.0001, help='weight d
 parser.add_argument('--eval_patience', type=int, default=20, help='patience for early stopping')
 
 
-# In[3]:
+# In[130]:
 
 
 setting = None
@@ -93,16 +95,17 @@ print("settings:", vars(settings))
 #     print(vars(settings), file=f)
 
 
-# In[4]:
+# In[164]:
 
 
-image_input_size = eval(settings.image_input_size)
-assert isinstance(image_input_size, tuple) and len(image_input_size) == 2, "image_input_size must be a tuple of length 2"
-# vars(settings)
-# print(image_input_size)
+# image_input_size = eval(settings.image_input_size)
+# assert isinstance(image_input_size, tuple) and len(image_input_size) == 2, "image_input_size must be a tuple of length 2"
+
+# # vars(settings)
+# # print(image_input_size)
 
 
-# In[5]:
+# In[133]:
 
 
 PIL.Image.MAX_IMAGE_PIXELS = 933120000
@@ -111,7 +114,7 @@ PIL.Image.MAX_IMAGE_PIXELS = 933120000
 IMAGE_INPUT_SIZE = image_input_size
 
 
-# In[6]:
+# In[134]:
 
 
 def create_dir_if_not_exist(dir):
@@ -119,7 +122,7 @@ def create_dir_if_not_exist(dir):
         os.makedirs(dir)
 
 
-# In[7]:
+# In[135]:
 
 
 SOURCE_DATASET_DIR = settings.source_dataset_dir
@@ -145,7 +148,7 @@ RESULT_DIR = Path("./result", EXPERIMENT_NAME, sub_folder_name)
 print("RESULT_DIR:", RESULT_DIR)
 
 
-# In[8]:
+# In[136]:
 
 
 # lr = 0.001
@@ -162,20 +165,20 @@ num_epochs = settings.num_epochs
 batch_size = settings.batch_size
 
 
-# In[9]:
+# In[137]:
 
 
 create_dir_if_not_exist(LOCAL_DATASET_DIR)
 
 
-# In[10]:
+# In[138]:
 
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 print(f'Using {device} for inference')
 
 
-# In[11]:
+# In[139]:
 
 
 #pandas load data from csv
@@ -208,14 +211,14 @@ else:
 
 
 
-# In[12]:
+# In[140]:
 
 
 dict_id_to_label = {i: label for i, label in enumerate(all_labels)}
 dict_label_to_id = {label: i for i, label in enumerate(all_labels)}
 
 
-# In[13]:
+# In[141]:
 
 
 def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to_id):
@@ -232,7 +235,7 @@ def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to
     return x_data
 
 
-# In[14]:
+# In[146]:
 
 
 train_image_path_and_label = tran_csv_to_img_path_and_label(train_csv, LOCAL_DATASET_DIR, TRAIN_IMAGE_FOLDER, dict_label_to_id)
@@ -256,7 +259,7 @@ path_list, labels = zip(*valid_set)
 print("train set category distribution: \n\t", Counter(labels))
 
 
-# In[15]:
+# In[147]:
 
 
 def show_img_by_path(img_path):
@@ -272,7 +275,7 @@ def show_img_by_path(img_path):
 # show_img_by_path(train_set[0][0])
 
 
-# In[16]:
+# In[148]:
 
 
 from torchvision.io import read_image
@@ -299,7 +302,7 @@ class UBCDataset(Dataset):
         return image, label
 
 
-# In[17]:
+# In[149]:
 
 
 # put data into dataloader
@@ -324,7 +327,7 @@ valid_dataset = UBCDataset(valid_set, transform=test_transform)
 
 
 
-# In[18]:
+# In[150]:
 
 
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
@@ -332,7 +335,7 @@ valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=Fals
 # test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
 
 
-# In[19]:
+# In[151]:
 
 
 #show image grid
@@ -346,7 +349,7 @@ def show_image_grid(dataloader, num_of_images=16):
 # show_image_grid(train_dataloader)
 
 
-# In[31]:
+# In[152]:
 
 
 # efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_v2_l', pretrained=True)
@@ -359,7 +362,7 @@ def show_image_grid(dataloader, num_of_images=16):
 # print(efficientnet.classifier.fc.in_features)
 
 
-# In[54]:
+# In[153]:
 
 
 efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
@@ -381,41 +384,68 @@ utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_convnets_
 # vars(efficientnet)
 
 
-# In[32]:
+# In[154]:
 
 
 model_raw = efficientnet
 classifier_in_feature_size = model_raw.classifier.fc.in_features
-model_raw.classifier = torch.nn.Sequential(
+classifier_head = torch.nn.Sequential(
     torch.nn.AdaptiveAvgPool2d(output_size=1),
     torch.nn.Flatten(),
     torch.nn.Dropout(p=0.2, inplace=False),
-    torch.nn.Linear(in_features=classifier_in_feature_size, out_features=1000, bias=True)
+    torch.nn.Linear(in_features=classifier_in_feature_size, out_features=256, bias=True),
+    torch.nn.ReLU(),
+    torch.nn.Dropout(p=0.2, inplace=False),
+    torch.nn.Linear(in_features=256, out_features=5, bias=True),
 )
+model_raw.classifier = classifier_head
 model_raw = model_raw.to(device)
 
 
-# In[33]:
+feature_extractor_params = []
+for name, params in model_raw.named_parameters():
+    if(name[:10] == "classifier"):
+        continue
+    feature_extractor_params.append(params)
+
+classifier_head_params = []
+for name, params in classifier_head.named_parameters():
+    classifier_head_params.append(params)
+
+
+# In[155]:
+
+
+# print("feature_extractor_params:", len(feature_extractor_params))
+# print(classifier_head_params)
+
+
+# In[156]:
 
 
 summary(model_raw, (3, ) + IMAGE_INPUT_SIZE, device=device.type)
 
 
-# In[ ]:
+# In[157]:
 
 
 criteria = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model_raw.classifier.parameters(), lr=lr, weight_decay=weight_decay)
+# optimizer = optim.Adam(model_raw.classifier.parameters(), lr=lr, weight_decay=weight_decay)
+optimizer = optim.Adam([{"params":feature_extractor_params, "lr":1e-7}, {"params":classifier_head_params, "lr":lr}], 
+                       lr=lr, weight_decay=weight_decay)
 
 
 
-# In[ ]:
+# In[178]:
 
 
 def eval(model, valid_dataloader, criteria, device):
         model.eval()
         valid_loss = 0.0
         valid_corrects = 0
+
+        y_gt = []
+        y_pred = []
 
         for imgs, labels in tqdm(valid_dataloader):
             imgs = imgs.to(device)
@@ -429,25 +459,36 @@ def eval(model, valid_dataloader, criteria, device):
             valid_loss += loss.item() * imgs.size(0)
             valid_corrects += torch.sum(preds == labels.data).detach().cpu().numpy()
 
+            y_gt.extend(labels.data.cpu().numpy().reshape(-1))
+            y_pred.extend(preds.cpu().numpy().reshape(-1))
+
         valid_loss = valid_loss / len(valid_dataloader.dataset)
         valid_acc = valid_corrects / len(valid_dataloader.dataset)
 
-        return valid_loss, valid_acc
+        valid_balanced_acc = balanced_accuracy_score(y_gt, y_pred)
+
+        return valid_loss, valid_acc, valid_balanced_acc
 
 
-# In[ ]:
+# In[183]:
 
 
 def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device):
     train_loss_list = []
     train_acc_list = []
+    train_balanced_acc_list = []
+
     valid_loss_list = []
     valid_acc_list = []
+    valid_balanced_acc_list = []
 
     best_valid_loss = float('inf')
     best_valid_acc = -0.0001
+    best_valid_balanced_acc = -0.0001
+
     best_model_valid_loss = None
     best_model_valid_acc = None
+    best_model_valid_balanced_acc = None
 
     start_time = time.time()
 
@@ -460,6 +501,9 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
         model.train()
         train_loss = 0.0
         train_corrects = 0
+        
+        y_gt = []
+        y_pred = []
 
         for imgs, labels in tqdm(train_dataloader):
             imgs = imgs.to(device)
@@ -477,19 +521,27 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
             train_loss += loss.item() * imgs.size(0)
             train_corrects += torch.sum(preds == labels.data).detach().cpu().numpy()
 
+            y_gt.extend(labels.data.cpu().numpy().reshape(-1))
+            y_pred.extend(preds.cpu().numpy().reshape(-1))
+
+
+
         train_loss = train_loss / len(train_dataloader.dataset)
         train_acc = train_corrects / len(train_dataloader.dataset)
+        train_balanced_acc = balanced_accuracy_score(y_gt, y_pred)
         train_loss_list.append(train_loss)
         train_acc_list.append(train_acc)
+        train_balanced_acc_list.append(train_balanced_acc)
 
         print(f'Train loss: {train_loss:.4f} Acc: {train_acc:.4f}')
         elapsed_time = time.time() - start_time
         print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
-        valid_loss, valid_acc = eval(model, valid_dataloader, criteria, device)
+        valid_loss, valid_acc, valid_balanced_acc = eval(model, valid_dataloader, criteria, device)
 
         valid_loss_list.append(valid_loss)
         valid_acc_list.append(valid_acc)
+        valid_balanced_acc_list.append(valid_balanced_acc)
 
         if valid_loss < best_valid_loss:
             best_valid_loss = valid_loss
@@ -498,6 +550,12 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
         if valid_acc > best_valid_acc:
             best_valid_acc = valid_acc
             best_model_valid_acc = copy.deepcopy(model)
+        # else:
+        #     counter_eval_not_improve += 1
+
+        if valid_balanced_acc > best_valid_balanced_acc:
+            best_valid_balanced_acc = valid_balanced_acc
+            best_model_valid_balanced_acc = copy.deepcopy(model)
         else:
             counter_eval_not_improve += 1
 
@@ -509,39 +567,53 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
         if counter_eval_not_improve >= eval_patience:
             print(f'Early stopping at epoch {epoch + 1}')
             break
+        else:
+            counter_eval_not_improve = 0
 
-    return model, best_model_valid_acc, best_model_valid_loss, \
-           train_loss_list, train_acc_list, valid_loss_list, valid_acc_list
+    return model, best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, \
+           train_loss_list, train_acc_list, train_balanced_acc_list, \
+           valid_loss_list, valid_acc_list, valid_balanced_acc_list, \
+           best_valid_loss, best_valid_acc
 
 
-# In[ ]:
+# In[184]:
 
 
-def store_result(best_model_valid_acc, best_model_valid_loss, train_loss_list, train_acc_list, valid_loss_list, valid_acc_list):
+def store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, \
+                 train_loss_list, train_acc_list, train_balanced_acc_list, \
+                 valid_loss_list, valid_acc_list, valid_balanced_acc_list):
     create_dir_if_not_exist(MODEL_SAVE_DIR)
     create_dir_if_not_exist(RESULT_DIR)
 
     torch.save(best_model_valid_acc.state_dict(), Path(MODEL_SAVE_DIR) / "best_model_valid_acc.pth")
     torch.save(best_model_valid_loss.state_dict(), Path(MODEL_SAVE_DIR) / "best_model_valid_loss.pth")
+    torch.save(best_model_valid_balanced_acc.state_dict(), Path(MODEL_SAVE_DIR) / "best_model_valid_balanced_acc.pth")
 
     with open(Path(RESULT_DIR) / "train_loss_list.pkl", "wb") as f:
         pickle.dump(train_loss_list, f)
     with open(Path(RESULT_DIR) / "train_acc_list.pkl", "wb") as f:
         pickle.dump(train_acc_list, f)
+    with open(Path(RESULT_DIR) / "train_balanced_acc_list.pkl", "wb") as f:
+        pickle.dump(train_balanced_acc_list, f)
+
     with open(Path(RESULT_DIR) / "valid_loss_list.pkl", "wb") as f:
         pickle.dump(valid_loss_list, f)
     with open(Path(RESULT_DIR) / "valid_acc_list.pkl", "wb") as f:
         pickle.dump(valid_acc_list, f)
+    with open(Path(RESULT_DIR) / "valid_balanced_acc_list.pkl", "wb") as f:
+        pickle.dump(valid_balanced_acc_list, f)
 
 
-# In[ ]:
+# In[197]:
 
 
-def plot_train_eval_result(train_loss_list, train_acc_list, valid_loss_list, valid_acc_list):
+def plot_train_eval_result(
+           train_loss_list, train_acc_list, train_balanced_acc_list, \
+           valid_loss_list, valid_acc_list, valid_balanced_acc_list):
     epochs = np.arange(1, len(train_loss_list) + 1)
 
-    plt.figure(figsize=(10, 4))
-    plt.subplot(2, 1, 1)
+    plt.figure(figsize=(10, 10))
+    plt.subplot(3, 1, 1)
     plt.plot(epochs, train_loss_list, label='train')
     plt.plot(epochs, valid_loss_list, label='valid')
     plt.title('Loss')
@@ -549,22 +621,32 @@ def plot_train_eval_result(train_loss_list, train_acc_list, valid_loss_list, val
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     
-    plt.subplot(2, 1, 2)
+    plt.subplot(3, 1, 2)
     plt.plot(epochs, [x*100 for x in train_acc_list], label='train')
     plt.plot(epochs, [x*100 for x in valid_acc_list], label='valid')
     plt.title('Accuracy')
     plt.legend()
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy (%)')
-    
+
+    plt.subplot(3, 1, 3)
+    plt.plot(epochs, [x*100 for x in train_balanced_acc_list], label='train')
+    plt.plot(epochs, [x*100 for x in valid_balanced_acc_list], label='valid')
+    plt.title('Balanced Accuracy')
+    plt.legend()
+    plt.xlabel('Epoch')
+    plt.ylabel('Balanced Accuracy (%)')
+
     plt.tight_layout()
 
 
-# In[ ]:
+# In[193]:
 
 
-model_trained, best_model_valid_acc, best_model_valid_loss, \
-train_loss_list, train_acc_list, valid_loss_list, valid_acc_list = \
+model_trained, best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, \
+train_loss_list, train_acc_list, train_balanced_acc_list, \
+valid_loss_list, valid_acc_list, valid_balanced_acc_list, \
+best_valid_loss, best_valid_acc = \
 train(model_raw, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device)
 
 
@@ -581,13 +663,17 @@ train(model_raw, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
 # In[ ]:
 
 
-store_result(best_model_valid_acc, best_model_valid_loss, train_loss_list, train_acc_list, valid_loss_list, valid_acc_list)
+store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, \
+             train_loss_list, train_acc_list, train_balanced_acc_list, \
+             valid_loss_list, valid_acc_list, valid_balanced_acc_list)
 
 
-# In[ ]:
+# In[198]:
 
 
-plot_train_eval_result(train_loss_list, train_acc_list, valid_loss_list, valid_acc_list)
+plot_train_eval_result(
+           train_loss_list, train_acc_list, train_balanced_acc_list, \
+           valid_loss_list, valid_acc_list, valid_balanced_acc_list)
 
 
 # In[ ]:

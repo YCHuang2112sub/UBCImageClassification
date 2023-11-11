@@ -35,6 +35,8 @@ import pickle
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
+from sklearn.metrics import balanced_accuracy_score
+
 
 from pathlib import Path
 from collections import defaultdict
@@ -46,7 +48,7 @@ import re
 from collections import Counter
 
 
-# In[ ]:
+# In[3]:
 
 
 print("number_of_cpus: ", torch.get_num_threads())
@@ -514,6 +516,9 @@ def eval(model, valid_dataloader, criteria, device):
         valid_loss = 0.0
         valid_corrects = 0
 
+        y_gt = []
+        y_pred = []
+
         for imgs, labels in tqdm(valid_dataloader):
             imgs = imgs.to(device)
             labels = labels.to(device)
@@ -526,10 +531,15 @@ def eval(model, valid_dataloader, criteria, device):
             valid_loss += loss.item() * imgs.size(0)
             valid_corrects += torch.sum(preds == labels.data).detach().cpu().numpy()
 
+            y_gt.extend(labels.data.cpu().numpy().reshape(-1))
+            y_pred.extend(preds.cpu().numpy().reshape(-1))
+
         valid_loss = valid_loss / len(valid_dataloader.dataset)
         valid_acc = valid_corrects / len(valid_dataloader.dataset)
 
-        return valid_loss, valid_acc
+        valid_balanced_acc = balanced_accuracy_score(y_gt, y_pred)
+
+        return valid_loss, valid_acc, valid_balanced_acc
 
 
 # In[ ]:
@@ -538,13 +548,19 @@ def eval(model, valid_dataloader, criteria, device):
 def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device):
     train_loss_list = []
     train_acc_list = []
+    train_balanced_acc_list = []
+
     valid_loss_list = []
     valid_acc_list = []
+    valid_balanced_acc_list = []
 
     best_valid_loss = float('inf')
     best_valid_acc = -0.0001
+    best_valid_balanced_acc = -0.0001
+
     best_model_valid_loss = None
     best_model_valid_acc = None
+    best_model_valid_balanced_acc = None
 
     start_time = time.time()
 
@@ -557,6 +573,9 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
         model.train()
         train_loss = 0.0
         train_corrects = 0
+        
+        y_gt = []
+        y_pred = []
 
         for imgs, labels in tqdm(train_dataloader):
             imgs = imgs.to(device)
@@ -574,19 +593,27 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
             train_loss += loss.item() * imgs.size(0)
             train_corrects += torch.sum(preds == labels.data).detach().cpu().numpy()
 
+            y_gt.extend(labels.data.cpu().numpy().reshape(-1))
+            y_pred.extend(preds.cpu().numpy().reshape(-1))
+
+
+
         train_loss = train_loss / len(train_dataloader.dataset)
         train_acc = train_corrects / len(train_dataloader.dataset)
+        train_balanced_acc = balanced_accuracy_score(y_gt, y_pred)
         train_loss_list.append(train_loss)
         train_acc_list.append(train_acc)
+        train_balanced_acc_list.append(train_balanced_acc)
 
         print(f'Train loss: {train_loss:.4f} Acc: {train_acc:.4f}')
         elapsed_time = time.time() - start_time
         print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
-        valid_loss, valid_acc = eval(model, valid_dataloader, criteria, device)
+        valid_loss, valid_acc, valid_balanced_acc = eval(model, valid_dataloader, criteria, device)
 
         valid_loss_list.append(valid_loss)
         valid_acc_list.append(valid_acc)
+        valid_balanced_acc_list.append(valid_balanced_acc)
 
         if valid_loss < best_valid_loss:
             best_valid_loss = valid_loss
@@ -595,6 +622,12 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
         if valid_acc > best_valid_acc:
             best_valid_acc = valid_acc
             best_model_valid_acc = copy.deepcopy(model)
+        # else:
+        #     counter_eval_not_improve += 1
+
+        if valid_balanced_acc > best_valid_balanced_acc:
+            best_valid_balanced_acc = valid_balanced_acc
+            best_model_valid_balanced_acc = copy.deepcopy(model)
         else:
             counter_eval_not_improve += 1
 
@@ -606,39 +639,53 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
         if counter_eval_not_improve >= eval_patience:
             print(f'Early stopping at epoch {epoch + 1}')
             break
+        else:
+            counter_eval_not_improve = 0
 
-    return model, best_model_valid_acc, best_model_valid_loss, \
-           train_loss_list, train_acc_list, valid_loss_list, valid_acc_list
+    return model, best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, \
+           train_loss_list, train_acc_list, train_balanced_acc_list, \
+           valid_loss_list, valid_acc_list, valid_balanced_acc_list, \
+           best_valid_loss, best_valid_acc
 
 
 # In[ ]:
 
 
-def store_result(best_model_valid_acc, best_model_valid_loss, train_loss_list, train_acc_list, valid_loss_list, valid_acc_list):
+def store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, \
+                 train_loss_list, train_acc_list, train_balanced_acc_list, \
+                 valid_loss_list, valid_acc_list, valid_balanced_acc_list):
     create_dir_if_not_exist(MODEL_SAVE_DIR)
     create_dir_if_not_exist(RESULT_DIR)
 
     torch.save(best_model_valid_acc.state_dict(), Path(MODEL_SAVE_DIR) / "best_model_valid_acc.pth")
     torch.save(best_model_valid_loss.state_dict(), Path(MODEL_SAVE_DIR) / "best_model_valid_loss.pth")
+    torch.save(best_model_valid_balanced_acc.state_dict(), Path(MODEL_SAVE_DIR) / "best_model_valid_balanced_acc.pth")
 
     with open(Path(RESULT_DIR) / "train_loss_list.pkl", "wb") as f:
         pickle.dump(train_loss_list, f)
     with open(Path(RESULT_DIR) / "train_acc_list.pkl", "wb") as f:
         pickle.dump(train_acc_list, f)
+    with open(Path(RESULT_DIR) / "train_balanced_acc_list.pkl", "wb") as f:
+        pickle.dump(train_balanced_acc_list, f)
+
     with open(Path(RESULT_DIR) / "valid_loss_list.pkl", "wb") as f:
         pickle.dump(valid_loss_list, f)
     with open(Path(RESULT_DIR) / "valid_acc_list.pkl", "wb") as f:
         pickle.dump(valid_acc_list, f)
+    with open(Path(RESULT_DIR) / "valid_balanced_acc_list.pkl", "wb") as f:
+        pickle.dump(valid_balanced_acc_list, f)
 
 
 # In[ ]:
 
 
-def plot_train_eval_result(train_loss_list, train_acc_list, valid_loss_list, valid_acc_list):
+def plot_train_eval_result(
+           train_loss_list, train_acc_list, train_balanced_acc_list, \
+           valid_loss_list, valid_acc_list, valid_balanced_acc_list):
     epochs = np.arange(1, len(train_loss_list) + 1)
 
     plt.figure(figsize=(10, 4))
-    plt.subplot(2, 1, 1)
+    plt.subplot(3, 1, 1)
     plt.plot(epochs, train_loss_list, label='train')
     plt.plot(epochs, valid_loss_list, label='valid')
     plt.title('Loss')
@@ -646,22 +693,32 @@ def plot_train_eval_result(train_loss_list, train_acc_list, valid_loss_list, val
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     
-    plt.subplot(2, 1, 2)
+    plt.subplot(3, 2, 1)
     plt.plot(epochs, [x*100 for x in train_acc_list], label='train')
     plt.plot(epochs, [x*100 for x in valid_acc_list], label='valid')
     plt.title('Accuracy')
     plt.legend()
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy (%)')
-    
+
+    plt.subplot(3, 3, 1)
+    plt.plot(epochs, [x*100 for x in train_balanced_acc_list], label='train')
+    plt.plot(epochs, [x*100 for x in valid_balanced_acc_list], label='valid')
+    plt.title('Balanced Accuracy')
+    plt.legend()
+    plt.xlabel('Epoch')
+    plt.ylabel('Balanced Accuracy (%)')
+
     plt.tight_layout()
 
 
 # In[ ]:
 
 
-model_trained, best_model_valid_acc, best_model_valid_loss, \
-train_loss_list, train_acc_list, valid_loss_list, valid_acc_list = \
+model_trained, best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, \
+train_loss_list, train_acc_list, train_balanced_acc_list, \
+valid_loss_list, valid_acc_list, valid_balanced_acc_list, \
+best_valid_loss, best_valid_acc = \
 train(ubc_cnn_model, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device)
 
 
@@ -678,13 +735,17 @@ train(ubc_cnn_model, train_dataloader, valid_dataloader, optimizer, criteria, nu
 # In[ ]:
 
 
-store_result(best_model_valid_acc, best_model_valid_loss, train_loss_list, train_acc_list, valid_loss_list, valid_acc_list)
+store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, \
+             train_loss_list, train_acc_list, train_balanced_acc_list, \
+             valid_loss_list, valid_acc_list, valid_balanced_acc_list)
 
 
 # In[ ]:
 
 
-plot_train_eval_result(train_loss_list, train_acc_list, valid_loss_list, valid_acc_list)
+plot_train_eval_result(
+           train_loss_list, train_acc_list, train_balanced_acc_list, \
+           valid_loss_list, valid_acc_list, valid_balanced_acc_list)
 
 
 # In[ ]:
