@@ -7,7 +7,7 @@
 # !python script.py
 
 
-# In[42]:
+# In[2]:
 
 
 import torch
@@ -44,6 +44,14 @@ import validators
 import argparse
 import re
 from collections import Counter
+
+
+# In[ ]:
+
+
+print("number_of_cpus: ", torch.get_num_threads())
+torch.set_num_threads(16)
+print("confined to number_of_cpus: ", torch.get_num_threads())
 
 
 # In[43]:
