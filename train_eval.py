@@ -511,7 +511,7 @@ optimizer = optim.Adam(ubc_cnn_model.parameters(), lr=lr, weight_decay=weight_de
 # In[ ]:
 
 
-def eval(model, valid_dataloader, criteria, device):
+def evaluation(model, valid_dataloader, criteria, device):
         model.eval()
         valid_loss = 0.0
         valid_corrects = 0
@@ -609,7 +609,7 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
         elapsed_time = time.time() - start_time
         print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
-        valid_loss, valid_acc, valid_balanced_acc = eval(model, valid_dataloader, criteria, device)
+        valid_loss, valid_acc, valid_balanced_acc = evaluation(model, valid_dataloader, criteria, device)
 
         valid_loss_list.append(valid_loss)
         valid_acc_list.append(valid_acc)

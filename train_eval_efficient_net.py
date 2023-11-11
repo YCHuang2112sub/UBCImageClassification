@@ -7,7 +7,7 @@
 # !python script.py
 
 
-# In[127]:
+# In[200]:
 
 
 import torch
@@ -48,7 +48,7 @@ import re
 from collections import Counter
 
 
-# In[128]:
+# In[201]:
 
 
 print("number_of_cpus: ", torch.get_num_threads())
@@ -56,7 +56,7 @@ torch.set_num_threads(16)
 print("confined to number_of_cpus: ", torch.get_num_threads())
 
 
-# In[129]:
+# In[202]:
 
 
 ## using argparse to set parameters
@@ -77,7 +77,7 @@ parser.add_argument('--weight_decay', type=float, default=0.0001, help='weight d
 parser.add_argument('--eval_patience', type=int, default=20, help='patience for early stopping')
 
 
-# In[130]:
+# In[203]:
 
 
 setting = None
@@ -95,11 +95,11 @@ print("settings:", vars(settings))
 #     print(vars(settings), file=f)
 
 
-# In[164]:
+# In[204]:
 
 
-# image_input_size = eval(settings.image_input_size)
-# assert isinstance(image_input_size, tuple) and len(image_input_size) == 2, "image_input_size must be a tuple of length 2"
+image_input_size = eval(settings.image_input_size)
+assert isinstance(image_input_size, tuple) and len(image_input_size) == 2, "image_input_size must be a tuple of length 2"
 
 # # vars(settings)
 # # print(image_input_size)
@@ -439,7 +439,7 @@ optimizer = optim.Adam([{"params":feature_extractor_params, "lr":1e-7}, {"params
 # In[178]:
 
 
-def eval(model, valid_dataloader, criteria, device):
+def evaluation(model, valid_dataloader, criteria, device):
         model.eval()
         valid_loss = 0.0
         valid_corrects = 0
@@ -537,7 +537,7 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
         elapsed_time = time.time() - start_time
         print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
-        valid_loss, valid_acc, valid_balanced_acc = eval(model, valid_dataloader, criteria, device)
+        valid_loss, valid_acc, valid_balanced_acc = evaluation(model, valid_dataloader, criteria, device)
 
         valid_loss_list.append(valid_loss)
         valid_acc_list.append(valid_acc)
