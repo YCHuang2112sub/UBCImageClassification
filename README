@@ -23,12 +23,16 @@ Resizing Dataset Images:
 Transfer .ipynb to .py:
     jupyter nbconvert --to python xxx.ipynb
 
+Checking your jobs status on SCC:
+    using following command:
+        watch -n 5 "qstat | grep <your_username>"
+
 ToDo list:
 [x] Add Argparse to resizing_dataset_image.py and train_eval.ipynb
 [x] stratified when splitting dataset into train and val
 [x] add early stopping + patience variable
 [x] + plot_result.ipynb
-[] + N_EPOCH_FOR_GRADIENT_ACCUMULATION
+[] + N_EPOCH_FOR_GRADIENT_ACCUMULATION (EFFECTIVE_BATCH_SIZE = BATCH_SIZE * N_EPOCH_FOR_GRADIENT_ACCUMULATION)
 [] Try Efficient Net
 [] Try CS640 Network
 [] Try Unet + Transformer
