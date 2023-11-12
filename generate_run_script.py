@@ -92,6 +92,7 @@ for i, command_line_args_tmp in  enumerate(list_of_command_line_args):
         f.write("#/bin/bash -l\n")
         f.write("#$ -pe omp 16\n")
         f.write("#$ -l mem_per_core=8G\n")
+        f.write("#$ -l h_rt=24:00:00\n")
         f.write(f"python {run_file_name} {command_line_args_tmp} > log{i:02d}\n")
 
 with open(Path(RUNNING_DIR, "run.sh"), "w") as f:
