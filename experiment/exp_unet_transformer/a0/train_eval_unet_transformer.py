@@ -7,7 +7,7 @@
 # !python script.py
 
 
-# In[2]:
+# In[7]:
 
 
 import torch
@@ -61,7 +61,7 @@ sys.path.append(os.getcwd() + '/../../../../')
 # except NameError:
 #     _in_ipython_session = False
 #     sys.path.append(os.path.realpath(__file__) + '/../../../')
-print(os.path.realpath(__file__))
+# print(os.path.realpath(__file__))
 # print(sys.path)
 from lib.network_architecture.unet_transformer_01 import MyViTBlock, FeatureTransformer, Unet, BridgingModel, \
                                                          get_unet_transformer_model_output
@@ -402,7 +402,8 @@ def show_image_grid(dataloader, num_of_images=16):
 
 unet_model = Unet(3, 3).to(device)
 bridging_model = BridgingModel().to(device)
-feature_transformer_model = FeatureTransformer().to(device)
+# feature_transformer_model = FeatureTransformer().to(device)
+feature_transformer_model = FeatureTransformer(data_dim=(IMAGE_INPUT_SIZE[0],512), hidden_d=512, n_heads=16, out_d=5).to(device)
 
 model_list = [unet_model, bridging_model, feature_transformer_model]
 
