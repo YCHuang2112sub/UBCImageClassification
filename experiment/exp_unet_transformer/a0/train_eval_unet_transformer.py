@@ -7,7 +7,7 @@
 # !python script.py
 
 
-# In[ ]:
+# In[2]:
 
 
 import torch
@@ -53,7 +53,15 @@ import sys
 import os
 # sys.path.append(Path(os.getcwd(),'../../').absolute())
 # print(type(Path(os.getcwd(),'../../').absolute()))
+
+# try:
+#     __IPYTHON__
 sys.path.append(os.getcwd() + '/../../../')
+sys.path.append(os.getcwd() + '/../../../../')
+# except NameError:
+#     _in_ipython_session = False
+#     sys.path.append(os.path.realpath(__file__) + '/../../../')
+print(os.path.realpath(__file__))
 # print(sys.path)
 from lib.network_architecture.unet_transformer_01 import MyViTBlock, FeatureTransformer, Unet, BridgingModel, \
                                                          get_unet_transformer_model_output
