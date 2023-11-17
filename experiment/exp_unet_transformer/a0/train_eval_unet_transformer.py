@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 # !python script.py
 
 
-# In[200]:
+# In[ ]:
 
 
 import torch
@@ -36,6 +36,7 @@ import pickle
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import balanced_accuracy_score
+from sklearn.metrics import confusion_matrix
 
 
 from pathlib import Path
@@ -48,7 +49,17 @@ import re
 from collections import Counter
 
 
-# In[201]:
+import sys
+import os
+# sys.path.append(Path(os.getcwd(),'../../').absolute())
+# print(type(Path(os.getcwd(),'../../').absolute()))
+sys.path.append(os.getcwd() + '/../../../')
+# print(sys.path)
+from lib.network_architecture.unet_transformer_01 import MyViTBlock, FeatureTransformer, Unet, BridgingModel, \
+                                                         get_unet_transformer_model_output
+
+
+# In[ ]:
 
 
 print("number_of_cpus: ", torch.get_num_threads())
@@ -56,13 +67,13 @@ torch.set_num_threads(16)
 print("confined to number_of_cpus: ", torch.get_num_threads())
 
 
-# In[202]:
+# In[ ]:
 
 
 ## using argparse to set parameters
 parser = argparse.ArgumentParser(description='Train model on UCB Image Dataset')
 parser.add_argument('--source_dataset_dir', type=str, default='/projectnb/cs640grp/materials/UBC-OCEAN_CS640', help='path to dataset')
-parser.add_argument('--local_dataset_dir', type=str, default='./dataset', help='path to local dataset')
+parser.add_argument('--local_dataset_dir', type=str, default='../../../dataset', help='path to local dataset')
 parser.add_argument('--model_dir', type=str, default='./model', help='path to tained model')
 parser.add_argument('--experiment_name', type=str, default='exp_1', help='experiment name')
 
@@ -77,7 +88,7 @@ parser.add_argument('--weight_decay', type=float, default=0.0001, help='weight d
 parser.add_argument('--eval_patience', type=int, default=20, help='patience for early stopping')
 
 
-# In[203]:
+# In[ ]:
 
 
 setting = None
@@ -95,7 +106,7 @@ print("settings:", vars(settings))
 #     print(vars(settings), file=f)
 
 
-# In[204]:
+# In[ ]:
 
 
 image_input_size = eval(settings.image_input_size)
@@ -105,7 +116,7 @@ assert isinstance(image_input_size, tuple) and len(image_input_size) == 2, "imag
 # # print(image_input_size)
 
 
-# In[133]:
+# In[ ]:
 
 
 PIL.Image.MAX_IMAGE_PIXELS = 933120000
@@ -114,7 +125,7 @@ PIL.Image.MAX_IMAGE_PIXELS = 933120000
 IMAGE_INPUT_SIZE = image_input_size
 
 
-# In[134]:
+# In[ ]:
 
 
 def create_dir_if_not_exist(dir):
@@ -122,7 +133,7 @@ def create_dir_if_not_exist(dir):
         os.makedirs(dir)
 
 
-# In[135]:
+# In[ ]:
 
 
 SOURCE_DATASET_DIR = settings.source_dataset_dir
@@ -148,7 +159,7 @@ RESULT_DIR = Path("./result", EXPERIMENT_NAME, sub_folder_name)
 print("RESULT_DIR:", RESULT_DIR)
 
 
-# In[136]:
+# In[ ]:
 
 
 # lr = 0.001
@@ -165,20 +176,20 @@ num_epochs = settings.num_epochs
 batch_size = settings.batch_size
 
 
-# In[137]:
+# In[ ]:
 
 
 create_dir_if_not_exist(LOCAL_DATASET_DIR)
 
 
-# In[138]:
+# In[ ]:
 
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 print(f'Using {device} for inference')
 
 
-# In[139]:
+# In[ ]:
 
 
 #pandas load data from csv
@@ -211,14 +222,14 @@ else:
 
 
 
-# In[140]:
+# In[ ]:
 
 
 dict_id_to_label = {i: label for i, label in enumerate(all_labels)}
 dict_label_to_id = {label: i for i, label in enumerate(all_labels)}
 
 
-# In[141]:
+# In[ ]:
 
 
 def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to_id):
@@ -235,7 +246,7 @@ def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to
     return x_data
 
 
-# In[146]:
+# In[ ]:
 
 
 train_image_path_and_label = tran_csv_to_img_path_and_label(train_csv, LOCAL_DATASET_DIR, TRAIN_IMAGE_FOLDER, dict_label_to_id)
@@ -259,7 +270,7 @@ path_list, labels = zip(*valid_set)
 print("train set category distribution: \n\t", Counter(labels))
 
 
-# In[147]:
+# In[ ]:
 
 
 def show_img_by_path(img_path):
@@ -275,7 +286,7 @@ def show_img_by_path(img_path):
 # show_img_by_path(train_set[0][0])
 
 
-# In[148]:
+# In[ ]:
 
 
 from torchvision.io import read_image
@@ -302,7 +313,7 @@ class UBCDataset(Dataset):
         return image, label
 
 
-# In[149]:
+# In[ ]:
 
 
 # put data into dataloader
@@ -327,7 +338,7 @@ valid_dataset = UBCDataset(valid_set, transform=test_transform)
 
 
 
-# In[150]:
+# In[ ]:
 
 
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
@@ -335,7 +346,7 @@ valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=Fals
 # test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
 
 
-# In[151]:
+# In[ ]:
 
 
 #show image grid
@@ -349,7 +360,7 @@ def show_image_grid(dataloader, num_of_images=16):
 # show_image_grid(train_dataloader)
 
 
-# In[152]:
+# In[ ]:
 
 
 # efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_v2_l', pretrained=True)
@@ -362,85 +373,100 @@ def show_image_grid(dataloader, num_of_images=16):
 # print(efficientnet.classifier.fc.in_features)
 
 
-# In[153]:
+# In[ ]:
 
 
-efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
+# efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
 
-if EXPERIMENT_NAME == "efficientnet_b0":
-    efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
-elif EXPERIMENT_NAME == "efficientnet_b4":
-    efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b4', pretrained=True)
-elif EXPERIMENT_NAME == "efficientnet_widese_b0":
-    efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_widese_b0', pretrained=True)
-elif EXPERIMENT_NAME == "efficientnet_widese_b4":
-    efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_widese_b4', pretrained=True)
-# elif EXPERIMENT_NAME == "efficientnet_v2_l":
-#     efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_v2_l', pretrained=True)
+# if EXPERIMENT_NAME == "efficientnet_b0":
+#     efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
+# elif EXPERIMENT_NAME == "efficientnet_b4":
+#     efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b4', pretrained=True)
+# elif EXPERIMENT_NAME == "efficientnet_widese_b0":
+#     efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_widese_b0', pretrained=True)
+# elif EXPERIMENT_NAME == "efficientnet_widese_b4":
+#     efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_widese_b4', pretrained=True)
+# # elif EXPERIMENT_NAME == "efficientnet_v2_l":
+# #     efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_v2_l', pretrained=True)
 
-utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_convnets_processing_utils')
+# utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_convnets_processing_utils')
+
+
+unet_model = Unet(3, 3).to(device)
+bridging_model = BridgingModel().to(device)
+feature_transformer_model = FeatureTransformer().to(device)
+
+model_list = [unet_model, bridging_model, feature_transformer_model]
+
 
 # efficientnet.eval().to(device)
 # vars(efficientnet)
 
 
-# In[154]:
+# In[ ]:
 
 
-model_raw = efficientnet
-classifier_in_feature_size = model_raw.classifier.fc.in_features
-classifier_head = torch.nn.Sequential(
-    torch.nn.AdaptiveAvgPool2d(output_size=1),
-    torch.nn.Flatten(),
-    torch.nn.Dropout(p=0.2, inplace=False),
-    torch.nn.Linear(in_features=classifier_in_feature_size, out_features=256, bias=True),
-    torch.nn.ReLU(),
-    torch.nn.Dropout(p=0.2, inplace=False),
-    torch.nn.Linear(in_features=256, out_features=5, bias=True),
-)
-model_raw.classifier = classifier_head
-model_raw = model_raw.to(device)
+# model_raw = efficientnet
+# classifier_in_feature_size = model_raw.classifier.fc.in_features
+# classifier_head = torch.nn.Sequential(
+#     torch.nn.AdaptiveAvgPool2d(output_size=1),
+#     torch.nn.Flatten(),
+#     torch.nn.Dropout(p=0.2, inplace=False),
+#     torch.nn.Linear(in_features=classifier_in_feature_size, out_features=256, bias=True),
+#     torch.nn.ReLU(),
+#     torch.nn.Dropout(p=0.2, inplace=False),
+#     torch.nn.Linear(in_features=256, out_features=5, bias=True),
+# )
+# model_raw.classifier = classifier_head
+# model_raw = model_raw.to(device)
 
 
-feature_extractor_params = []
-for name, params in model_raw.named_parameters():
-    if(name[:10] == "classifier"):
-        continue
-    feature_extractor_params.append(params)
+# feature_extractor_params = []
+# for name, params in model_raw.named_parameters():
+#     if(name[:10] == "classifier"):
+#         continue
+#     feature_extractor_params.append(params)
 
-classifier_head_params = []
-for name, params in classifier_head.named_parameters():
-    classifier_head_params.append(params)
+# classifier_head_params = []
+# for name, params in classifier_head.named_parameters():
+#     classifier_head_params.append(params)
 
 
-# In[155]:
+# In[ ]:
 
 
 # print("feature_extractor_params:", len(feature_extractor_params))
 # print(classifier_head_params)
 
 
-# In[156]:
+# In[ ]:
 
 
-summary(model_raw, (3, ) + IMAGE_INPUT_SIZE, device=device.type)
+# summary(model_raw, (3, ) + IMAGE_INPUT_SIZE, device=device.type)
 
 
-# In[157]:
+# In[ ]:
 
 
 criteria = nn.CrossEntropyLoss()
 # optimizer = optim.Adam(model_raw.classifier.parameters(), lr=lr, weight_decay=weight_decay)
-optimizer = optim.Adam([{"params":feature_extractor_params, "lr":1e-7}, {"params":classifier_head_params, "lr":lr}], 
+
+optimizer = optim.Adam([{"params":unet_model.parameters(), "lr":lr}, 
+                        {"params":bridging_model.parameters(), "lr":lr}, 
+                        {"params":feature_transformer_model.parameters(), "lr":lr}], 
                        lr=lr, weight_decay=weight_decay)
 
 
 
-# In[178]:
+# In[ ]:
 
 
-def evaluation(model, valid_dataloader, criteria, device):
-        model.eval()
+def evaluation(model_list, valid_dataloader, criteria, device):
+        for model in model_list:
+            model.eval()
+
+        unet_model, bridging_model, feature_transformer_model = model_list
+
         valid_loss = 0.0
         valid_corrects = 0
 
@@ -452,7 +478,9 @@ def evaluation(model, valid_dataloader, criteria, device):
             labels = labels.to(device)
 
             with torch.no_grad():
-                outputs = model(imgs)
+                y_pred_ep, out, unet_out = get_unet_transformer_model_output(imgs, unet_model, bridging_model, feature_transformer_model)
+                outputs = y_pred_ep
+                # outputs = model(imgs)
                 _, preds = torch.max(outputs, -1)
                 loss = criteria(outputs, labels)
 
@@ -461,6 +489,9 @@ def evaluation(model, valid_dataloader, criteria, device):
 
             y_gt.extend(labels.data.cpu().numpy().reshape(-1))
             y_pred.extend(preds.cpu().numpy().reshape(-1))
+            
+        confusion_matrix_result = confusion_matrix(y_gt, y_pred)
+        print("confusion_matrix_result:\n", confusion_matrix_result)
 
         valid_loss = valid_loss / len(valid_dataloader.dataset)
         valid_acc = valid_corrects / len(valid_dataloader.dataset)
@@ -470,10 +501,10 @@ def evaluation(model, valid_dataloader, criteria, device):
         return valid_loss, valid_acc, valid_balanced_acc
 
 
-# In[183]:
+# In[ ]:
 
 
-def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device):
+def train(model_list, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device):
     train_loss_list = []
     train_acc_list = []
     train_balanced_acc_list = []
@@ -498,7 +529,11 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
         print(f'Epoch {epoch + 1}/{num_epochs}')
         print('-' * 10)
 
-        model.train()
+        for model in model_list:
+            model.train()
+
+        unet_model, bridging_model, feature_transformer_model = model_list
+
         train_loss = 0.0
         train_corrects = 0
         
@@ -509,10 +544,14 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
             imgs = imgs.to(device)
             labels = labels.to(device)
 
-
-            outputs = model(imgs)
+            y_pred_ep, out, unet_out = get_unet_transformer_model_output(imgs, unet_model, bridging_model, feature_transformer_model)
+            outputs = y_pred_ep
+            # outputs = model(imgs)
             _, preds = torch.max(outputs, -1)
-            loss = criteria(outputs, labels)
+            
+            loss_cat = criteria(outputs, labels)
+            loss_img = (unet_out - imgs).pow(2).mean()
+            loss = loss_cat + loss_img
 
             optimizer.zero_grad()
             loss.backward()
@@ -524,7 +563,10 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
             y_gt.extend(labels.data.cpu().numpy().reshape(-1))
             y_pred.extend(preds.cpu().numpy().reshape(-1))
 
-
+        # print(y_gt)
+        # print(y_pred)
+        confusion_matrix_result = confusion_matrix(y_gt, y_pred)
+        print("confusion_matrix_result:\n", confusion_matrix_result)
 
         train_loss = train_loss / len(train_dataloader.dataset)
         train_acc = train_corrects / len(train_dataloader.dataset)
@@ -537,7 +579,7 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
         elapsed_time = time.time() - start_time
         print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
-        valid_loss, valid_acc, valid_balanced_acc = evaluation(model, valid_dataloader, criteria, device)
+        valid_loss, valid_acc, valid_balanced_acc = evaluation(model_list, valid_dataloader, criteria, device)
 
         valid_loss_list.append(valid_loss)
         valid_acc_list.append(valid_acc)
@@ -545,17 +587,17 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
 
         if valid_loss < best_valid_loss:
             best_valid_loss = valid_loss
-            best_model_valid_loss = copy.deepcopy(model)
+            best_model_valid_loss = copy.deepcopy(model_list)
         
         if valid_acc > best_valid_acc:
             best_valid_acc = valid_acc
-            best_model_valid_acc = copy.deepcopy(model)
+            best_model_valid_acc = copy.deepcopy(model_list)
         # else:
         #     counter_eval_not_improve += 1
 
         if valid_balanced_acc > best_valid_balanced_acc:
             best_valid_balanced_acc = valid_balanced_acc
-            best_model_valid_balanced_acc = copy.deepcopy(model)
+            best_model_valid_balanced_acc = copy.deepcopy(model_list)
         else:
             counter_eval_not_improve += 1
 
@@ -570,13 +612,13 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
         else:
             counter_eval_not_improve = 0
 
-    return model, best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, \
+    return model_list, best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, \
            train_loss_list, train_acc_list, train_balanced_acc_list, \
            valid_loss_list, valid_acc_list, valid_balanced_acc_list, \
            best_valid_loss, best_valid_acc
 
 
-# In[184]:
+# In[ ]:
 
 
 def store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, \
@@ -585,9 +627,19 @@ def store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_b
     create_dir_if_not_exist(MODEL_SAVE_DIR)
     create_dir_if_not_exist(RESULT_DIR)
 
-    torch.save(best_model_valid_acc.state_dict(), Path(MODEL_SAVE_DIR) / "best_model_valid_acc.pth")
-    torch.save(best_model_valid_loss.state_dict(), Path(MODEL_SAVE_DIR) / "best_model_valid_loss.pth")
-    torch.save(best_model_valid_balanced_acc.state_dict(), Path(MODEL_SAVE_DIR) / "best_model_valid_balanced_acc.pth")
+    model_name_list = ["unet_model", "bridging_model", "feature_transformer_model"]
+    for (model, model_name) in zip(best_model_valid_acc, model_name_list):
+        torch.save(model.state_dict(), Path(MODEL_SAVE_DIR) / f"{model_name}_best_model_valid_acc.pth")
+
+    for (model, model_name) in zip(best_model_valid_loss, model_name_list):
+        torch.save(model.state_dict(), Path(MODEL_SAVE_DIR) / f"{model_name}_best_model_valid_loss.pth")
+
+    for (model, model_name) in zip(best_model_valid_balanced_acc, model_name_list):
+        torch.save(model.state_dict(), Path(MODEL_SAVE_DIR) / f"{model_name}_best_model_valid_balanced_acc.pth")
+
+    # torch.save(best_model_valid_acc.state_dict(), Path(MODEL_SAVE_DIR) / "best_model_valid_acc.pth")
+    # torch.save(best_model_valid_loss.state_dict(), Path(MODEL_SAVE_DIR) / "best_model_valid_loss.pth")
+    # torch.save(best_model_valid_balanced_acc.state_dict(), Path(MODEL_SAVE_DIR) / "best_model_valid_balanced_acc.pth")
 
     with open(Path(RESULT_DIR) / "train_loss_list.pkl", "wb") as f:
         pickle.dump(train_loss_list, f)
@@ -604,7 +656,7 @@ def store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_b
         pickle.dump(valid_balanced_acc_list, f)
 
 
-# In[197]:
+# In[ ]:
 
 
 def plot_train_eval_result(
@@ -640,15 +692,18 @@ def plot_train_eval_result(
     plt.tight_layout()
 
 
-# In[193]:
+# In[ ]:
 
 
-model_trained, best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, \
+model_list_trained, best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, \
 train_loss_list, train_acc_list, train_balanced_acc_list, \
 valid_loss_list, valid_acc_list, valid_balanced_acc_list, \
 best_valid_loss, best_valid_acc = \
-train(model_raw, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device)
+train(model_list, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device)
 
+print("best_valid_loss:", np.min(valid_loss_list))
+print("best_valid_acc:", np.max(valid_acc_list))
+print("best_valid_balanced_acc:", np.max(valid_balanced_acc_list))
 
 
 # In[ ]:
@@ -668,7 +723,7 @@ store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_balan
              valid_loss_list, valid_acc_list, valid_balanced_acc_list)
 
 
-# In[198]:
+# In[ ]:
 
 
 plot_train_eval_result(

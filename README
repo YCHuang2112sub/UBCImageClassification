@@ -32,6 +32,8 @@ TODO list:
 - [x] stratified when splitting dataset into train and val
 - [x] add early stopping + patience variable
 - [x] + plot_result.ipynb
+- [] + logging
+- [] + image_postfix arg in command line
 - [] + N_EPOCH_FOR_GRADIENT_ACCUMULATION (EFFECTIVE_BATCH_SIZE = BATCH_SIZE * N_EPOCH_FOR_GRADIENT_ACCUMULATION)
 - [] Try Efficient Net
 - [] Try CS640 Network

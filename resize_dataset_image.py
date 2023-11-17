@@ -35,7 +35,7 @@ import re
 parser = argparse.ArgumentParser(description='Downsample UCB Image Dataset')
 parser.add_argument('--source_dataset_dir', type=str, default='/projectnb/cs640grp/materials/UBC-OCEAN_CS640', help='path to dataset')
 parser.add_argument('--target_dataset_dir', type=str, default='./dataset', help='path to local dataset')
-parser.add_argument('--model_dir', type=str, default='./model', help='path to tained model')
+# parser.add_argument('--model_dir', type=str, default='./model', help='path to tained model')
 
 parser.add_argument('--source_train_image_folder', type=str, default='train_images_compressed_80', help='training image folder name')
 parser.add_argument('--source_test_image_folder', type=str, default='test_images_compressed_80', help='training image folder name')
@@ -97,9 +97,11 @@ create_dir_if_not_exist(TARGET_DATASET_PATH)
 
 def load_image(img_name, image_source_dir_path):
     img_path = image_source_dir_path / img_name
+    # img_path = Path(image_source_dir_path, img_name.split('.')[0]+'_thumbnail.png')
     
     # check image is exist
     if not img_path.exists():
+        print(f"img_path {img_path} is not exist")
         return None
 
     #load image
@@ -129,6 +131,7 @@ image_save_dir_path = Path(target_dataset_path) / target_image_folder
 create_dir_if_not_exist(image_save_dir_path)
 print(f"target dir: {image_save_dir_path}")
 
+
 start_time = time.time()
 
 for i in tqdm(range(len(x_csv))):
@@ -137,6 +140,7 @@ for i in tqdm(range(len(x_csv))):
     #load image
     source_img = load_image(img_name, image_source_dir_path)
     if(source_img == None):
+        # print(f"image {img_name} is not exist")
         continue
 
     #transform image
