@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[74]:
 
 
 # !python script.py
 
 
-# In[1]:
+# In[75]:
 
 
 import torch
@@ -63,14 +63,13 @@ sys.path.append(os.getcwd() + '/../../../../')
 #     sys.path.append(os.path.realpath(__file__) + '/../../../')
 # print(os.path.realpath(__file__))
 # print(sys.path)
-from lib.network_architecture.unet_transformer_01 import MyViTBlock, FeatureTransformer, Unet, BridgingModel, \
-                                                         get_unet_transformer_model_output
+from lib.network_architecture.unet_transformer_01 import MyViTBlock, FeatureTransformer, Unet, BridgingModel,                                                          get_unet_transformer_model_output
 
 import logging
 
 
+# In[76]:
 
-# In[ ]:
 
 
 print("number_of_cpus: ", torch.get_num_threads())
@@ -78,7 +77,7 @@ torch.set_num_threads(16)
 print("confined to number_of_cpus: ", torch.get_num_threads())
 
 
-# In[ ]:
+# In[77]:
 
 
 ## using argparse to set parameters
@@ -88,10 +87,11 @@ parser.add_argument('--local_dataset_dir', type=str, default='../../../dataset',
 parser.add_argument('--model_dir', type=str, default='./model', help='path to tained model')
 parser.add_argument('--experiment_name', type=str, default='exp_1', help='experiment name')
 
-parser.add_argument('--train_image_folder', type=str, default='img_size_256x256', help='training image folder name')
+parser.add_argument('--train_image_folder', type=str, default='img_size_512x512', help='training image folder name')
+parser.add_argument('--eval_image_folder', type=str, default='test_img_size_512x512', help='evaluate image folder name')
 # parser.add_argument('--train_image_folder', type=str, default='train_images_compressed_80', help='training image folder name')
-parser.add_argument('--image_input_size', type=str, default='(256, 256)', help='input image size')
-parser.add_argument('--batch_size', type=int, default=64, help='batch size')
+parser.add_argument('--image_input_size', type=str, default='(512, 512)', help='input image size')
+parser.add_argument('--batch_size', type=int, default=8, help='batch size')
 parser.add_argument('--num_epochs', type=int, default=10, help='number of epochs')
 parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
 # parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
@@ -99,7 +99,7 @@ parser.add_argument('--weight_decay', type=float, default=0.0001, help='weight d
 parser.add_argument('--eval_patience', type=int, default=20, help='patience for early stopping')
 
 
-# In[ ]:
+# In[78]:
 
 
 setting = None
@@ -117,7 +117,7 @@ print("settings:", vars(settings))
 #     print(vars(settings), file=f)
 
 
-# In[ ]:
+# In[79]:
 
 
 image_input_size = eval(settings.image_input_size)
@@ -127,7 +127,7 @@ assert isinstance(image_input_size, tuple) and len(image_input_size) == 2, "imag
 # # print(image_input_size)
 
 
-# In[ ]:
+# In[80]:
 
 
 PIL.Image.MAX_IMAGE_PIXELS = 933120000
@@ -136,7 +136,7 @@ PIL.Image.MAX_IMAGE_PIXELS = 933120000
 IMAGE_INPUT_SIZE = image_input_size
 
 
-# In[ ]:
+# In[81]:
 
 
 def create_dir_if_not_exist(dir):
@@ -144,7 +144,7 @@ def create_dir_if_not_exist(dir):
         os.makedirs(dir)
 
 
-# In[ ]:
+# In[82]:
 
 
 SOURCE_DATASET_DIR = settings.source_dataset_dir
@@ -153,6 +153,7 @@ SOURCE_DATASET_DIR = settings.source_dataset_dir
 # TEST_IMAGE_FOLDER = "test_images_compressed_80"
 # TRAIN_IMAGE_FOLDER = f"img_size_{IMAGE_INPUT_SIZE[0]}x{IMAGE_INPUT_SIZE[1]}"
 TRAIN_IMAGE_FOLDER = settings.train_image_folder
+EVAL_IMAGE_FOLDER = settings.eval_image_folder
 
 
 # LOCAL_DATASET_DIR = "./dataset"
@@ -174,7 +175,7 @@ print("LOG_DIR:", LOG_DIR)
 create_dir_if_not_exist(LOG_DIR)
 
 
-# In[ ]:
+# In[83]:
 
 
 # # logging.basicConfig(level=logging.DEBUG)
@@ -196,7 +197,7 @@ logging.basicConfig(level=logging.DEBUG, filename=LOG_DIR/'log.txt', filemode='w
 # 	time.sleep(5)
 
 
-# In[ ]:
+# In[84]:
 
 
 # lr = 0.001
@@ -213,20 +214,20 @@ num_epochs = settings.num_epochs
 batch_size = settings.batch_size
 
 
-# In[ ]:
+# In[85]:
 
 
 create_dir_if_not_exist(LOCAL_DATASET_DIR)
 
 
-# In[ ]:
+# In[86]:
 
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 print(f'Using {device} for inference')
 
 
-# In[ ]:
+# In[87]:
 
 
 #pandas load data from csv
@@ -252,21 +253,20 @@ else:
 
 
 
-
 # In[ ]:
 
 
 
 
 
-# In[ ]:
+# In[88]:
 
 
 dict_id_to_label = {i: label for i, label in enumerate(all_labels)}
 dict_label_to_id = {label: i for i, label in enumerate(all_labels)}
 
 
-# In[ ]:
+# In[89]:
 
 
 def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to_id):
@@ -283,17 +283,18 @@ def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to
     return x_data
 
 
-# In[ ]:
+# In[90]:
 
 
 train_image_path_and_label = tran_csv_to_img_path_and_label(train_csv, LOCAL_DATASET_DIR, TRAIN_IMAGE_FOLDER, dict_label_to_id)
-# test_image_path_and_label = tran_csv_to_img_path_and_label(test_csv, LOCAL_DATASET_DIR, TEST_IMAGE_FOLDER, dict_label_to_id)
+test_image_path_and_label = tran_csv_to_img_path_and_label(test_csv, LOCAL_DATASET_DIR, EVAL_IMAGE_FOLDER, dict_label_to_id)
 
-# Random split
-# train_set, valid_set = train_test_split(train_image_path_and_label, test_size=0.2, random_state=42)
-train_set, valid_set = train_test_split(train_image_path_and_label, test_size=0.2, random_state=42, 
-                                        stratify=[x[1] for x in train_image_path_and_label])
-# test_set = test_image_path_and_label
+# # Random split
+# # train_set, valid_set = train_test_split(train_image_path_and_label, test_size=0.2, random_state=42)
+# train_set, valid_set = train_test_split(train_image_path_and_label, test_size=0.2, random_state=42, 
+#                                         stratify=[x[1] for x in train_image_path_and_label])
+train_set = train_image_path_and_label
+valid_set = test_image_path_and_label
 
 
 print("train set size:", len(train_set))    
@@ -307,7 +308,7 @@ path_list, labels = zip(*valid_set)
 print("train set category distribution: \n\t", Counter(labels))
 
 
-# In[ ]:
+# In[91]:
 
 
 def show_img_by_path(img_path):
@@ -323,7 +324,7 @@ def show_img_by_path(img_path):
 # show_img_by_path(train_set[0][0])
 
 
-# In[ ]:
+# In[92]:
 
 
 from torchvision.io import read_image
@@ -350,7 +351,7 @@ class UBCDataset(Dataset):
         return image, label
 
 
-# In[ ]:
+# In[93]:
 
 
 # put data into dataloader
@@ -374,8 +375,7 @@ valid_dataset = UBCDataset(valid_set, transform=test_transform)
 # test_dataset = UBCDataset(test_set, transform=test_transform)
 
 
-
-# In[ ]:
+# In[94]:
 
 
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
@@ -383,7 +383,7 @@ valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=Fals
 # test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
 
 
-# In[ ]:
+# In[95]:
 
 
 #show image grid
@@ -397,7 +397,7 @@ def show_image_grid(dataloader, num_of_images=16):
 # show_image_grid(train_dataloader)
 
 
-# In[ ]:
+# In[96]:
 
 
 # efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_v2_l', pretrained=True)
@@ -410,7 +410,7 @@ def show_image_grid(dataloader, num_of_images=16):
 # print(efficientnet.classifier.fc.in_features)
 
 
-# In[ ]:
+# In[97]:
 
 
 # efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
@@ -431,8 +431,21 @@ def show_image_grid(dataloader, num_of_images=16):
 
 unet_model = Unet(3, 3).to(device)
 bridging_model = BridgingModel().to(device)
+
+X = torch.zeros((1, 3, IMAGE_INPUT_SIZE[0], IMAGE_INPUT_SIZE[1])).to(device)
+unet_out, hidden_features = unet_model(X)
+(x1, x2, x3, x4, x5) = hidden_features
+fs = bridging_model(x1, x2, x3, x4, x5)
+B, C, H, W = fs[0].shape
+vs = [x.permute(0,2,3,1).reshape(B, H*W, C) for x in fs]
+
+x5 = hidden_features[4].permute(0,2,3,1).reshape(B, H*W, C)
+x5_data_dim = x5.shape[1:] 
+print(x5_data_dim)
+
 # feature_transformer_model = FeatureTransformer().to(device)
-feature_transformer_model = FeatureTransformer(data_dim=(IMAGE_INPUT_SIZE[0],512), hidden_d=512, n_heads=16, out_d=5).to(device)
+feature_transformer_model = FeatureTransformer(data_dim=x5_data_dim, hidden_d=512, n_heads=16, out_d=5).to(device)
+
 
 model_list = [unet_model, bridging_model, feature_transformer_model]
 
@@ -486,6 +499,7 @@ model_list = [unet_model, bridging_model, feature_transformer_model]
 # In[ ]:
 
 
+
 criteria = nn.CrossEntropyLoss()
 # optimizer = optim.Adam(model_raw.classifier.parameters(), lr=lr, weight_decay=weight_decay)
 
@@ -495,8 +509,31 @@ optimizer = optim.Adam([{"params":unet_model.parameters(), "lr":lr},
                        lr=lr, weight_decay=weight_decay)
 
 
+# In[ ]:
 
-# In[2]:
+
+
+
+def get_category_accuracy(y_gt: np.array, y_pred: np.array, n_category):
+    # category_accuracy = np.zeros(n_category)
+
+    assert(len(y_gt) == len(y_pred))
+    assert(len(y_gt.shape) == 1 and len(y_pred.shape) == 1)
+
+    cat_mask_2d = (y_gt == np.arange(n_category).reshape(-1, 1))
+    category_accuracy = ((y_gt == y_pred) * cat_mask_2d).mean(axis=1)
+
+    return category_accuracy
+
+# a = np.random.randint(0, 5, 10)
+# b = np.random.randint(0, 5, 10)
+# print("a:", a)
+# print("b:", b)
+
+# print("get_category_accuracy:", get_category_accuracy(y_gt=a, y_pred=b, n_category=5))
+
+
+# In[ ]:
 
 
 def evaluation(model_list, valid_dataloader, criteria, device):
@@ -529,9 +566,13 @@ def evaluation(model_list, valid_dataloader, criteria, device):
             y_pred.extend(preds.cpu().numpy().reshape(-1))
             
         confusion_matrix_result = confusion_matrix(y_gt, y_pred)
-        print("confusion_matrix_result:\n", confusion_matrix_result)
-        logging.info("confusion_matrix_result:\n", confusion_matrix_result)
+        print("confusion_matrix_result:\n" + str(confusion_matrix_result))
+        logging.info("confusion_matrix_result:\n" + str(confusion_matrix_result))
 
+        category_accuracy = get_category_accuracy(y_gt=np.array(y_gt), y_pred=np.array(y_pred), n_category=5)
+        print("get_category_accuracy:" + str(category_accuracy))
+        logging.info("get_category_accuracy:" + str(category_accuracy))
+        
         valid_loss = valid_loss / len(valid_dataloader.dataset)
         valid_acc = valid_corrects / len(valid_dataloader.dataset)
 
@@ -540,7 +581,7 @@ def evaluation(model_list, valid_dataloader, criteria, device):
         return valid_loss, valid_acc, valid_balanced_acc
 
 
-# In[3]:
+# In[ ]:
 
 
 def train(model_list, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device):
@@ -607,9 +648,13 @@ def train(model_list, train_dataloader, valid_dataloader, optimizer, criteria, n
         # print(y_gt)
         # print(y_pred)
         confusion_matrix_result = confusion_matrix(y_gt, y_pred)
-        print("confusion_matrix_result:\n", confusion_matrix_result)
-        logging.info("confusion_matrix_result:\n", confusion_matrix_result)
+        print("confusion_matrix_result:\n" + str(confusion_matrix_result))
+        logging.info("confusion_matrix_result:\n" + str(confusion_matrix_result))
 
+        category_accuracy = get_category_accuracy(y_gt=np.array(y_gt), y_pred=np.array(y_pred), n_category=5)
+        print("get_category_accuracy:" + str(category_accuracy))
+        logging.info("get_category_accuracy:" + str(category_accuracy))
+        
         train_loss = train_loss / len(train_dataloader.dataset)
         train_acc = train_corrects / len(train_dataloader.dataset)
         train_balanced_acc = balanced_accuracy_score(y_gt, y_pred)
@@ -659,18 +704,13 @@ def train(model_list, train_dataloader, valid_dataloader, optimizer, criteria, n
         else:
             counter_eval_not_improve = 0
 
-    return model_list, best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, \
-           train_loss_list, train_acc_list, train_balanced_acc_list, \
-           valid_loss_list, valid_acc_list, valid_balanced_acc_list, \
-           best_valid_loss, best_valid_acc
+    return model_list, best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc,            train_loss_list, train_acc_list, train_balanced_acc_list,            valid_loss_list, valid_acc_list, valid_balanced_acc_list,            best_valid_loss, best_valid_acc
 
 
 # In[ ]:
 
 
-def store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, \
-                 train_loss_list, train_acc_list, train_balanced_acc_list, \
-                 valid_loss_list, valid_acc_list, valid_balanced_acc_list):
+def store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc,                  train_loss_list, train_acc_list, train_balanced_acc_list,                  valid_loss_list, valid_acc_list, valid_balanced_acc_list):
     create_dir_if_not_exist(MODEL_SAVE_DIR)
     create_dir_if_not_exist(RESULT_DIR)
 
@@ -742,11 +782,7 @@ def plot_train_eval_result(
 # In[ ]:
 
 
-model_list_trained, best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, \
-train_loss_list, train_acc_list, train_balanced_acc_list, \
-valid_loss_list, valid_acc_list, valid_balanced_acc_list, \
-best_valid_loss, best_valid_acc = \
-train(model_list, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device)
+model_list_trained, best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, train_loss_list, train_acc_list, train_balanced_acc_list, valid_loss_list, valid_acc_list, valid_balanced_acc_list, best_valid_loss, best_valid_acc = train(model_list, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device)
 
 print("best_valid_loss:", np.min(valid_loss_list))
 print("best_valid_acc:", np.max(valid_acc_list))
@@ -765,9 +801,7 @@ print("best_valid_balanced_acc:", np.max(valid_balanced_acc_list))
 # In[ ]:
 
 
-store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, \
-             train_loss_list, train_acc_list, train_balanced_acc_list, \
-             valid_loss_list, valid_acc_list, valid_balanced_acc_list)
+store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc,              train_loss_list, train_acc_list, train_balanced_acc_list,              valid_loss_list, valid_acc_list, valid_balanced_acc_list)
 
 
 # In[ ]:
