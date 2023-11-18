@@ -7,7 +7,7 @@
 # !python script.py
 
 
-# In[7]:
+# In[1]:
 
 
 import torch
@@ -65,6 +65,9 @@ sys.path.append(os.getcwd() + '/../../../../')
 # print(sys.path)
 from lib.network_architecture.unet_transformer_01 import MyViTBlock, FeatureTransformer, Unet, BridgingModel, \
                                                          get_unet_transformer_model_output
+
+import logging
+
 
 
 # In[ ]:
@@ -165,6 +168,32 @@ sub_folder_name = re.sub(r"\.", "p", sub_folder_name)
 MODEL_SAVE_DIR = Path(MODEL_DIR, EXPERIMENT_NAME, sub_folder_name)
 RESULT_DIR = Path("./result", EXPERIMENT_NAME, sub_folder_name)
 print("RESULT_DIR:", RESULT_DIR)
+
+LOG_DIR = Path("./log", EXPERIMENT_NAME)
+print("LOG_DIR:", LOG_DIR)
+create_dir_if_not_exist(LOG_DIR)
+
+
+# In[ ]:
+
+
+# # logging.basicConfig(level=logging.DEBUG)
+
+
+
+# logging.basicConfig(level=logging.INFO, filename='log.txt', filemode='w',
+logging.basicConfig(level=logging.DEBUG, filename=LOG_DIR/'log.txt', filemode='w',
+	format='[%(asctime)s %(levelname)-8s] %(message)s',
+	datefmt='%Y%m%d %H:%M:%S',
+	)
+
+# if __name__ == "__main__":
+# 	logging.debug('debug')
+# 	logging.info('info')
+# 	logging.warning('warning')
+# 	logging.error('error')
+# 	logging.critical('critical')
+# 	time.sleep(5)
 
 
 # In[ ]:
@@ -467,7 +496,7 @@ optimizer = optim.Adam([{"params":unet_model.parameters(), "lr":lr},
 
 
 
-# In[ ]:
+# In[2]:
 
 
 def evaluation(model_list, valid_dataloader, criteria, device):
@@ -501,6 +530,7 @@ def evaluation(model_list, valid_dataloader, criteria, device):
             
         confusion_matrix_result = confusion_matrix(y_gt, y_pred)
         print("confusion_matrix_result:\n", confusion_matrix_result)
+        logging.info("confusion_matrix_result:\n", confusion_matrix_result)
 
         valid_loss = valid_loss / len(valid_dataloader.dataset)
         valid_acc = valid_corrects / len(valid_dataloader.dataset)
@@ -510,7 +540,7 @@ def evaluation(model_list, valid_dataloader, criteria, device):
         return valid_loss, valid_acc, valid_balanced_acc
 
 
-# In[ ]:
+# In[3]:
 
 
 def train(model_list, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device):
@@ -537,6 +567,8 @@ def train(model_list, train_dataloader, valid_dataloader, optimizer, criteria, n
     for epoch in range(num_epochs):
         print(f'Epoch {epoch + 1}/{num_epochs}')
         print('-' * 10)
+        logging.info(f'Epoch {epoch + 1}/{num_epochs}')
+        logging.info('-' * 10)
 
         for model in model_list:
             model.train()
@@ -576,6 +608,7 @@ def train(model_list, train_dataloader, valid_dataloader, optimizer, criteria, n
         # print(y_pred)
         confusion_matrix_result = confusion_matrix(y_gt, y_pred)
         print("confusion_matrix_result:\n", confusion_matrix_result)
+        logging.info("confusion_matrix_result:\n", confusion_matrix_result)
 
         train_loss = train_loss / len(train_dataloader.dataset)
         train_acc = train_corrects / len(train_dataloader.dataset)
@@ -585,8 +618,10 @@ def train(model_list, train_dataloader, valid_dataloader, optimizer, criteria, n
         train_balanced_acc_list.append(train_balanced_acc)
 
         print(f'Train loss: {train_loss:.4f} Acc: {train_acc:.4f} Balanced Acc: {train_balanced_acc:.4f}')
+        logging.info(f'Train loss: {train_loss:.4f} Acc: {train_acc:.4f} Balanced Acc: {train_balanced_acc:.4f}')
         elapsed_time = time.time() - start_time
         print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
+        logging.info(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
         valid_loss, valid_acc, valid_balanced_acc = evaluation(model_list, valid_dataloader, criteria, device)
 
@@ -612,11 +647,14 @@ def train(model_list, train_dataloader, valid_dataloader, optimizer, criteria, n
 
 
         print(f'Valid loss: {valid_loss:.4f} Acc: {valid_acc:.4f} Balanced Acc: {valid_balanced_acc:.4f}')
+        logging.info(f'Valid loss: {valid_loss:.4f} Acc: {valid_acc:.4f} Balanced Acc: {valid_balanced_acc:.4f}')
         elapsed_time = time.time() - start_time
         print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
+        logging.info(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
         if counter_eval_not_improve >= eval_patience:
             print(f'Early stopping at epoch {epoch + 1}')
+            logging.info(f'Early stopping at epoch {epoch + 1}')
             break
         else:
             counter_eval_not_improve = 0

@@ -7,7 +7,7 @@
 # !python script.py
 
 
-# In[27]:
+# In[2]:
 
 
 import torch
@@ -48,8 +48,16 @@ import argparse
 import re
 from collections import Counter
 
+import logging
 
-# In[28]:
+
+# In[ ]:
+
+
+
+
+
+# In[3]:
 
 
 print("number_of_cpus: ", torch.get_num_threads())
@@ -57,7 +65,7 @@ torch.set_num_threads(16)
 print("confined to number_of_cpus: ", torch.get_num_threads())
 
 
-# In[29]:
+# In[4]:
 
 
 ## using argparse to set parameters
@@ -78,7 +86,7 @@ parser.add_argument('--weight_decay', type=float, default=0.0001, help='weight d
 parser.add_argument('--eval_patience', type=int, default=20, help='patience for early stopping')
 
 
-# In[30]:
+# In[5]:
 
 
 setting = None
@@ -96,7 +104,7 @@ print("settings:", vars(settings))
 #     print(vars(settings), file=f)
 
 
-# In[31]:
+# In[6]:
 
 
 image_input_size = eval(settings.image_input_size)
@@ -106,7 +114,7 @@ assert isinstance(image_input_size, tuple) and len(image_input_size) == 2, "imag
 # # print(image_input_size)
 
 
-# In[32]:
+# In[7]:
 
 
 PIL.Image.MAX_IMAGE_PIXELS = 933120000
@@ -115,15 +123,17 @@ PIL.Image.MAX_IMAGE_PIXELS = 933120000
 IMAGE_INPUT_SIZE = image_input_size
 
 
-# In[33]:
+# In[8]:
 
 
 def create_dir_if_not_exist(dir):
-    if not os.path.exists(dir):
-        os.makedirs(dir)
+    # if not os.path.exists(dir):
+    #     os.makedirs(dir)
+    if not Path(dir).exists():
+        Path(dir).mkdir(parents=True, exist_ok=True)
 
 
-# In[34]:
+# In[15]:
 
 
 SOURCE_DATASET_DIR = settings.source_dataset_dir
@@ -147,6 +157,32 @@ sub_folder_name = re.sub(r"\.", "p", sub_folder_name)
 MODEL_SAVE_DIR = Path(MODEL_DIR, EXPERIMENT_NAME, sub_folder_name)
 RESULT_DIR = Path("./result", EXPERIMENT_NAME, sub_folder_name)
 print("RESULT_DIR:", RESULT_DIR)
+
+LOG_DIR = Path("./log", EXPERIMENT_NAME)
+print("LOG_DIR:", LOG_DIR)
+create_dir_if_not_exist(LOG_DIR)
+
+
+# In[11]:
+
+
+# # logging.basicConfig(level=logging.DEBUG)
+
+
+
+# logging.basicConfig(level=logging.INFO, filename='log.txt', filemode='w',
+logging.basicConfig(level=logging.DEBUG, filename=LOG_DIR/'log.txt', filemode='w',
+	format='[%(asctime)s %(levelname)-8s] %(message)s',
+	datefmt='%Y%m%d %H:%M:%S',
+	)
+
+# if __name__ == "__main__":
+# 	logging.debug('debug')
+# 	logging.info('info')
+# 	logging.warning('warning')
+# 	logging.error('error')
+# 	logging.critical('critical')
+# 	time.sleep(5)
 
 
 # In[35]:
@@ -467,6 +503,8 @@ def evaluation(model, valid_dataloader, criteria, device):
         # print(y_pred)
         confusion_matrix_result = confusion_matrix(y_gt, y_pred)
         print("confusion_matrix_result:\n", confusion_matrix_result)
+        logging.info("confusion_matrix_result:\n", confusion_matrix_result)
+
         
         valid_loss = valid_loss / len(valid_dataloader.dataset)
         valid_acc = valid_corrects / len(valid_dataloader.dataset)
@@ -503,6 +541,8 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
     for epoch in range(num_epochs):
         print(f'Epoch {epoch + 1}/{num_epochs}')
         print('-' * 10)
+        logging.info(f'Epoch {epoch + 1}/{num_epochs}')
+        logging.info('-' * 10)
 
         model.train()
         train_loss = 0.0
@@ -535,6 +575,7 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
         # print(y_pred)
         confusion_matrix_result = confusion_matrix(y_gt, y_pred)
         print("confusion_matrix_result:\n", confusion_matrix_result)
+        logging.info("confusion_matrix_result:\n", confusion_matrix_result)
 
         train_loss = train_loss / len(train_dataloader.dataset)
         train_acc = train_corrects / len(train_dataloader.dataset)
@@ -544,8 +585,10 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
         train_balanced_acc_list.append(train_balanced_acc)
 
         print(f'Train loss: {train_loss:.4f} Acc: {train_acc:.4f} Balanced Acc: {train_balanced_acc:.4f}')
+        logging.info(f'Train loss: {train_loss:.4f} Acc: {train_acc:.4f} Balanced Acc: {train_balanced_acc:.4f}')
         elapsed_time = time.time() - start_time
         print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
+        logging.info(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
         valid_loss, valid_acc, valid_balanced_acc = evaluation(model, valid_dataloader, criteria, device)
 
@@ -571,11 +614,14 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
 
 
         print(f'Valid loss: {valid_loss:.4f} Acc: {valid_acc:.4f} Balanced Acc: {valid_balanced_acc:.4f}')
+        logging.info(f'Valid loss: {valid_loss:.4f} Acc: {valid_acc:.4f} Balanced Acc: {valid_balanced_acc:.4f}')
         elapsed_time = time.time() - start_time
         print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
+        logging.info(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
         if counter_eval_not_improve >= eval_patience:
             print(f'Early stopping at epoch {epoch + 1}')
+            logging.info(f'Early stopping at epoch {epoch + 1}')
             break
         else:
             counter_eval_not_improve = 0
