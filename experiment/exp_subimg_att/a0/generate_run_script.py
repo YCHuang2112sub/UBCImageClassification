@@ -5,7 +5,7 @@ from pathlib import Path
 #run_file_name = "train_eval.py"
 # run_file_name = "train_eval_efficient_net.py"
 RUNNING_DIR = './run'
-run_file_name = "../train_eval_unet_transformer.py"
+run_file_name = "../train_eval_subimg_att.py"
 
 def create_dir_if_not_exist(dir_path):
     if not Path(dir_path).exists():
