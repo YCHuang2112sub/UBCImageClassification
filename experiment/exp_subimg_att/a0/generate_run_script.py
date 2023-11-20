@@ -31,7 +31,7 @@ setting_param_dict = {
 
 setting_param_multi_combination_dict = {    
     #"experiment_name": ["efficientnet_b0", "efficientnet_b4", "efficientnet_widese_b0", "efficientnet_widese_b4"],
-    "experiment_name": ["unet_transformer_01"],
+    "experiment_name": ["subimg_att_01"],
     # "lr": [0.001, 0.0001],
     # "weight_decay": [0.0001, 0.00001]
 }

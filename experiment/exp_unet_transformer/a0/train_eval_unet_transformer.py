@@ -330,10 +330,11 @@ def show_img_by_path(img_path):
 from torchvision.io import read_image
 
 class UBCDataset(Dataset):
-    def __init__(self, img_path_and_label, transform=None, target_transform=None):
+    def __init__(self, img_path_and_label, transform=None, target_transform=None, random_add_single_value=False):
         self.data = img_path_and_label
         self.transform = transform
         self.target_transform = target_transform
+        self.random_add_single_value = random_add_single_value
 
     def __len__(self):
         return len(self.data)
@@ -348,6 +349,9 @@ class UBCDataset(Dataset):
         if self.target_transform:
             label = self.target_transform(label)
         # print(torch.max(image), torch.min(image))
+        
+        if self.random_add_single_value:
+            image += torch.randn(1) * 0.01
         return image, label
 
 
@@ -356,21 +360,30 @@ class UBCDataset(Dataset):
 
 # put data into dataloader
 train_transform = transforms.Compose([
-    transforms.Resize(IMAGE_INPUT_SIZE),
+    transforms.Resize(IMAGE_INPUT_SIZE, antialias=True),
     transforms.RandomHorizontalFlip(),
     transforms.RandomVerticalFlip(),
-    transforms.RandomRotation(30),
+    # transforms.RandomRotation(180),
+    transforms.RandomAffine(180, translate=(0.1, 0.1), scale=(0.9, 1.1), shear=10, interpolation=PIL.Image.BILINEAR),
     transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,))
+    transforms.Normalize(mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225])
 ])
+
+# v2.Compose([v2.Resize(256, antialias = True),
+#                               v2.CenterCrop(224),
+#                               v2.ToImage(),
+#                               v2.ToDtype(torch.float32, scale = True),
+#                               v2.Normalize(mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225])])
+
 
 test_transform = transforms.Compose([
-    transforms.Resize(IMAGE_INPUT_SIZE),
+    transforms.Resize(IMAGE_INPUT_SIZE, antialias=True),
+    transforms.CenterCrop(IMAGE_INPUT_SIZE),
     transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,))
+    transforms.Normalize(mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225])
 ])
 
-train_dataset = UBCDataset(train_set, transform=train_transform)
+train_dataset = UBCDataset(train_set, transform=train_transform, random_add_single_value=True)
 valid_dataset = UBCDataset(valid_set, transform=test_transform)
 # test_dataset = UBCDataset(test_set, transform=test_transform)
 
@@ -521,7 +534,7 @@ def get_category_accuracy(y_gt: np.array, y_pred: np.array, n_category):
     assert(len(y_gt.shape) == 1 and len(y_pred.shape) == 1)
 
     cat_mask_2d = (y_gt == np.arange(n_category).reshape(-1, 1))
-    category_accuracy = ((y_gt == y_pred) * cat_mask_2d).mean(axis=1)
+    category_accuracy = ((y_gt == y_pred) * cat_mask_2d).sum(axis=1) / cat_mask_2d.sum(axis=1)
 
     return category_accuracy
 
@@ -530,7 +543,13 @@ def get_category_accuracy(y_gt: np.array, y_pred: np.array, n_category):
 # print("a:", a)
 # print("b:", b)
 
-# print("get_category_accuracy:", get_category_accuracy(y_gt=a, y_pred=b, n_category=5))
+# # print("get_category_accuracy:", get_category_accuracy(y_gt=a, y_pred=b, n_category=5))
+# category_accuracy = get_category_accuracy(y_gt=np.array(a), y_pred=np.array(b), n_category=5)
+# print("category_accuracy:", category_accuracy)
+# print(str(category_accuracy))
+# print(type(category_accuracy[0]))
+# confusion_matrix_result = confusion_matrix(y_true=a, y_pred=b, labels=[0, 1, 2, 3, 4])
+# print("get_category_accuracy:" + str(category_accuracy))
 
 
 # In[ ]:
@@ -664,9 +683,11 @@ def train(model_list, train_dataloader, valid_dataloader, optimizer, criteria, n
 
         print(f'Train loss: {train_loss:.4f} Acc: {train_acc:.4f} Balanced Acc: {train_balanced_acc:.4f}')
         logging.info(f'Train loss: {train_loss:.4f} Acc: {train_acc:.4f} Balanced Acc: {train_balanced_acc:.4f}')
+        print("id_to_label:", sorted(dict_id_to_label.items()))
+        logging.info("id_to_label:" + str(sorted(dict_id_to_label.items())))
         elapsed_time = time.time() - start_time
-        print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
-        logging.info(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
+        print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}\n\n')
+        logging.info(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}\n\n')
 
         valid_loss, valid_acc, valid_balanced_acc = evaluation(model_list, valid_dataloader, criteria, device)
 
@@ -693,6 +714,8 @@ def train(model_list, train_dataloader, valid_dataloader, optimizer, criteria, n
 
         print(f'Valid loss: {valid_loss:.4f} Acc: {valid_acc:.4f} Balanced Acc: {valid_balanced_acc:.4f}')
         logging.info(f'Valid loss: {valid_loss:.4f} Acc: {valid_acc:.4f} Balanced Acc: {valid_balanced_acc:.4f}')
+        print("id_to_label:", sorted(dict_id_to_label.items()))
+        logging.info("id_to_label:" + str(sorted(dict_id_to_label.items())))
         elapsed_time = time.time() - start_time
         print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
         logging.info(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
