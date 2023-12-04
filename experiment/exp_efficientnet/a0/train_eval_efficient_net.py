@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[248]:
+# In[1]:
 
 
 # !python script.py
 
 
-# In[249]:
+# In[2]:
 
 
 import torch
@@ -57,7 +57,7 @@ import logging
 
 
 
-# In[250]:
+# In[3]:
 
 
 
@@ -66,7 +66,7 @@ torch.set_num_threads(16)
 print("confined to number_of_cpus: ", torch.get_num_threads())
 
 
-# In[251]:
+# In[4]:
 
 
 ## using argparse to set parameters
@@ -88,7 +88,7 @@ parser.add_argument('--weight_decay', type=float, default=0.0001, help='weight d
 parser.add_argument('--eval_patience', type=int, default=20, help='patience for early stopping')
 
 
-# In[252]:
+# In[5]:
 
 
 setting = None
@@ -106,7 +106,7 @@ print("settings:", vars(settings))
 #     print(vars(settings), file=f)
 
 
-# In[253]:
+# In[6]:
 
 
 image_input_size = eval(settings.image_input_size)
@@ -116,7 +116,7 @@ assert isinstance(image_input_size, tuple) and len(image_input_size) == 2, "imag
 # # print(image_input_size)
 
 
-# In[254]:
+# In[7]:
 
 
 PIL.Image.MAX_IMAGE_PIXELS = 933120000
@@ -125,7 +125,7 @@ PIL.Image.MAX_IMAGE_PIXELS = 933120000
 IMAGE_INPUT_SIZE = image_input_size
 
 
-# In[255]:
+# In[8]:
 
 
 def create_dir_if_not_exist(dir):
@@ -135,7 +135,7 @@ def create_dir_if_not_exist(dir):
         Path(dir).mkdir(parents=True, exist_ok=True)
 
 
-# In[256]:
+# In[9]:
 
 
 SOURCE_DATASET_DIR = settings.source_dataset_dir
@@ -166,7 +166,7 @@ print("LOG_DIR:", LOG_DIR)
 create_dir_if_not_exist(LOG_DIR)
 
 
-# In[257]:
+# In[10]:
 
 
 # # logging.basicConfig(level=logging.DEBUG)
@@ -188,7 +188,7 @@ logging.basicConfig(level=logging.DEBUG, filename=LOG_DIR/'log.txt', filemode='w
 # 	time.sleep(5)
 
 
-# In[258]:
+# In[11]:
 
 
 # lr = 0.001
@@ -205,20 +205,20 @@ num_epochs = settings.num_epochs
 batch_size = settings.batch_size
 
 
-# In[259]:
+# In[12]:
 
 
 create_dir_if_not_exist(LOCAL_DATASET_DIR)
 
 
-# In[260]:
+# In[13]:
 
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 print(f'Using {device} for inference')
 
 
-# In[261]:
+# In[14]:
 
 
 #pandas load data from csv
@@ -244,7 +244,7 @@ else:
 
 
 
-# In[262]:
+# In[15]:
 
 
 dict_id_to_label = {i: label for i, label in enumerate(all_labels)}
@@ -254,7 +254,7 @@ dict_label_to_id = {label: i for i, label in enumerate(all_labels)}
 print("dict_id_to_label:", sorted(dict_id_to_label.items()))
 
 
-# In[263]:
+# In[16]:
 
 
 def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to_id):
@@ -272,7 +272,7 @@ def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to
     return x_data
 
 
-# In[264]:
+# In[17]:
 
 
 train_image_path_and_label = tran_csv_to_img_path_and_label(train_csv, LOCAL_DATASET_DIR, TRAIN_IMAGE_FOLDER, dict_label_to_id)
@@ -299,7 +299,7 @@ path_list, labels = zip(*valid_set)
 print("train set category distribution: \n\t", Counter(labels))
 
 
-# In[265]:
+# In[18]:
 
 
 def show_img_by_path(img_path):
@@ -316,7 +316,7 @@ def show_img_by_path(img_path):
 # show_img_by_path(train_set[0][0])
 
 
-# In[266]:
+# In[19]:
 
 
 from torchvision.io import read_image
@@ -336,6 +336,13 @@ class UBCDataset(Dataset):
         image_path, label = self.data[idx]
         image = Image.open(image_path)
         # print(np.max(image), np.min(image))
+
+        image_np = np.array(image)
+        ### white to black
+        mask = (image_np >= np.array([230, 230, 230])).all(axis=-1)
+        image_np[mask] = [0, 0, 0]
+        image = Image.fromarray(image_np)
+
         if self.transform:
             image = self.transform(image)
         if self.target_transform:
@@ -347,7 +354,7 @@ class UBCDataset(Dataset):
         return image, label
 
 
-# In[267]:
+# In[20]:
 
 
 # put data into dataloader
@@ -380,7 +387,7 @@ valid_dataset = UBCDataset(valid_set, transform=test_transform)
 # test_dataset = UBCDataset(test_set, transform=test_transform)
 
 
-# In[268]:
+# In[21]:
 
 
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
@@ -388,21 +395,30 @@ valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=Fals
 # test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
 
 
-# In[269]:
+# In[22]:
 
 
 #show image grid
 def show_image_grid(dataloader, num_of_images=16):
     imgs, labels = next(iter(dataloader))
+
+    # imgs_tmp = imgs.permute(0, 2, 3, 1)
+    # # mask = (imgs_tmp == torch.tensor([255, 255, 255])).all(dim=3, keepdim=True)
+    # mask = (imgs_tmp >= torch.tensor([100, 100, 100])).all(dim=3)
+    # imgs_tmp[mask] = torch.tensor([0, 0, 0]).float()
+    # imgs = imgs_tmp.permute(0, 3, 1, 2)
+
     image_grid = torchvision.utils.make_grid(imgs[:num_of_images], nrow=8)
     plt.imshow(image_grid.permute(1, 2, 0).numpy())
     # plt.show()
     print("labels:", labels[:num_of_images], [dict_id_to_label[label.item()] for label in labels[:num_of_images]])
 
-# show_image_grid(train_dataloader)
+# # show_image_grid(train_dataloader)
+# # show_image_grid( DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=0), 64)
+# show_image_grid( DataLoader(valid_dataset, batch_size=64, shuffle=False, num_workers=0), 64)
 
 
-# In[270]:
+# In[23]:
 
 
 # efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_v2_l', pretrained=True)
@@ -415,7 +431,7 @@ def show_image_grid(dataloader, num_of_images=16):
 # print(efficientnet.classifier.fc.in_features)
 
 
-# In[271]:
+# In[24]:
 
 
 efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
@@ -437,7 +453,7 @@ utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_convnets_
 # vars(efficientnet)
 
 
-# In[272]:
+# In[25]:
 
 
 model_raw = efficientnet
@@ -466,20 +482,20 @@ for name, params in classifier_head.named_parameters():
     classifier_head_params.append(params)
 
 
-# In[273]:
+# In[26]:
 
 
 # print("feature_extractor_params:", len(feature_extractor_params))
 # print(classifier_head_params)
 
 
-# In[274]:
+# In[27]:
 
 
 summary(model_raw, (3, ) + IMAGE_INPUT_SIZE, device=device.type)
 
 
-# In[275]:
+# In[28]:
 
 
 
@@ -489,7 +505,7 @@ optimizer = optim.Adam([{"params":feature_extractor_params, "lr":1e-7}, {"params
                        lr=lr, weight_decay=weight_decay)
 
 
-# In[276]:
+# In[29]:
 
 
 
@@ -519,7 +535,7 @@ def get_category_accuracy(y_gt: np.array, y_pred: np.array, n_category):
 # print("get_category_accuracy:" + str(category_accuracy))
 
 
-# In[277]:
+# In[30]:
 
 
 def evaluation(model, valid_dataloader, criteria, device):
@@ -560,10 +576,10 @@ def evaluation(model, valid_dataloader, criteria, device):
 
         valid_balanced_acc = balanced_accuracy_score(y_gt, y_pred)
 
-        return valid_loss, valid_acc, valid_balanced_acc
+        return valid_loss, valid_acc, valid_balanced_acc, y_pred, y_gt
 
 
-# In[278]:
+# In[31]:
 
 
 def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device):
@@ -645,7 +661,7 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
         print(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
         logging.info(f'Elapsed time: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
-        valid_loss, valid_acc, valid_balanced_acc = evaluation(model, valid_dataloader, criteria, device)
+        valid_loss, valid_acc, valid_balanced_acc, _, _ = evaluation(model, valid_dataloader, criteria, device)
 
         valid_loss_list.append(valid_loss)
         valid_acc_list.append(valid_acc)
@@ -686,7 +702,7 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
     return model, best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc,            train_loss_list, train_acc_list, train_balanced_acc_list,            valid_loss_list, valid_acc_list, valid_balanced_acc_list,            best_valid_loss, best_valid_acc
 
 
-# In[279]:
+# In[32]:
 
 
 def store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc,                  train_loss_list, train_acc_list, train_balanced_acc_list,                  valid_loss_list, valid_acc_list, valid_balanced_acc_list):
@@ -712,7 +728,7 @@ def store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_b
         pickle.dump(valid_balanced_acc_list, f)
 
 
-# In[280]:
+# In[33]:
 
 
 def plot_train_eval_result(
@@ -748,7 +764,7 @@ def plot_train_eval_result(
     plt.tight_layout()
 
 
-# In[281]:
+# In[34]:
 
 
 model_trained, best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, train_loss_list, train_acc_list, train_balanced_acc_list, valid_loss_list, valid_acc_list, valid_balanced_acc_list, best_valid_loss, best_valid_acc = train(model_raw, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device)
@@ -758,7 +774,7 @@ print("best_valid_acc:", np.max(valid_acc_list))
 print("best_valid_balanced_acc:", np.max(valid_balanced_acc_list))
 
 
-# In[282]:
+# In[35]:
 
 
 # # train_loss_list = [data.cpu().item() for data in train_loss_list]
@@ -767,13 +783,13 @@ print("best_valid_balanced_acc:", np.max(valid_balanced_acc_list))
 # valid_acc_list = [data.cpu().item() for data in valid_acc_list]
 
 
-# In[283]:
+# In[36]:
 
 
 store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc,              train_loss_list, train_acc_list, train_balanced_acc_list,              valid_loss_list, valid_acc_list, valid_balanced_acc_list)
 
 
-# In[284]:
+# In[37]:
 
 
 plot_train_eval_result(
@@ -787,9 +803,32 @@ plot_train_eval_result(
 
 
 
+# In[39]:
+
+
+valid_loss, valid_acc, valid_balanced_acc, y_pred, y_gt = evaluation(best_model_valid_acc, valid_dataloader, criteria, device)
+
+path_list, labels = zip(*valid_set)
+for pred, gt, label, path in zip(y_pred, y_gt, labels, path_list):
+    # if pred != gt:
+    # if gt != label:
+    filename = path.name
+    print(f"pred: {dict_id_to_label[pred]}, gt: {dict_id_to_label[gt]}, label: {dict_id_to_label[label]}, filename: {filename}")
+
+
+# In[44]:
+
+
+print(f"pred: {dict_id_to_label[pred]}, gt: {dict_id_to_label[gt]}, label: {dict_id_to_label[label]}, filename: {filename}")
+# put pred, gt, label, filename into a dataframe
+pd_predict = pd.DataFrame({"image_id": [path.name.split(".")[0] for path in path_list], "label": y_pred, "gt": y_gt})
+display(pd_predict)
+pd_predict.to_csv(Path(RESULT_DIR) / "pd_predict.csv", index=False)
+
+
 # 
 
-# In[285]:
+# In[ ]:
 
 
 # efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
@@ -798,7 +837,7 @@ plot_train_eval_result(
 # efficientnet.eval().to(device)
 
 
-# In[286]:
+# In[ ]:
 
 
 # # Download an example image
@@ -808,14 +847,14 @@ plot_train_eval_result(
 # except: urllib.request.urlretrieve(url, filename)
 
 
-# In[287]:
+# In[ ]:
 
 
 # model = torch.hub.load('mateuszbuda/brain-segmentation-pytorch', 'unet',
 #     in_channels=3, out_channels=1, init_features=32, pretrained=True)
 
 
-# In[288]:
+# In[ ]:
 
 
 # import numpy as np
