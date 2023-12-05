@@ -803,10 +803,12 @@ plot_train_eval_result(
 
 
 
-# In[39]:
+# In[45]:
 
 
 valid_loss, valid_acc, valid_balanced_acc, y_pred, y_gt = evaluation(best_model_valid_acc, valid_dataloader, criteria, device)
+
+print("valid_loss:", valid_loss, "valid_acc:", valid_acc, "valid_balanced_acc:", valid_balanced_acc)
 
 path_list, labels = zip(*valid_set)
 for pred, gt, label, path in zip(y_pred, y_gt, labels, path_list):
@@ -822,7 +824,7 @@ for pred, gt, label, path in zip(y_pred, y_gt, labels, path_list):
 print(f"pred: {dict_id_to_label[pred]}, gt: {dict_id_to_label[gt]}, label: {dict_id_to_label[label]}, filename: {filename}")
 # put pred, gt, label, filename into a dataframe
 pd_predict = pd.DataFrame({"image_id": [path.name.split(".")[0] for path in path_list], "label": y_pred, "gt": y_gt})
-display(pd_predict)
+# display(pd_predict)
 pd_predict.to_csv(Path(RESULT_DIR) / "pd_predict.csv", index=False)
 
 
