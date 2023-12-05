@@ -7,7 +7,7 @@
 # !python script.py
 
 
-# In[2]:
+# In[1]:
 
 
 import torch
@@ -57,7 +57,7 @@ import logging
 
 
 
-# In[3]:
+# In[2]:
 
 
 
@@ -66,7 +66,7 @@ torch.set_num_threads(16)
 print("confined to number_of_cpus: ", torch.get_num_threads())
 
 
-# In[4]:
+# In[3]:
 
 
 ## using argparse to set parameters
@@ -76,11 +76,16 @@ parser.add_argument('--local_dataset_dir', type=str, default='../../../dataset',
 parser.add_argument('--model_dir', type=str, default='./model', help='path to tained model')
 parser.add_argument('--experiment_name', type=str, default='exp_1', help='experiment name')
 
-parser.add_argument('--train_image_folder', type=str, default='img_size_512x512', help='training image folder name')
-parser.add_argument('--eval_image_folder', type=str, default='test_img_size_512x512', help='evaluate image folder name')
-# parser.add_argument('--train_image_folder', type=str, default='train_images_compressed_80', help='training image folder name')
-parser.add_argument('--image_input_size', type=str, default='(512, 512)', help='input image size')
+# parser.add_argument('--train_image_folder', type=str, default='img_size_512x512', help='training image folder name')
+# parser.add_argument('--eval_image_folder', type=str, default='test_img_size_512x512', help='evaluate image folder name')
+# # parser.add_argument('--train_image_folder', type=str, default='train_images_compressed_80', help='training image folder name')
+# parser.add_argument('--image_input_size', type=str, default='(512, 512)', help='input image size')
+parser.add_argument('--train_image_folder', type=str, default='img_size_2048x2048', help='training image folder name')
+parser.add_argument('--eval_image_folder', type=str, default='test_img_size_2048x2048', help='evaluate image folder name')
+parser.add_argument('--image_input_size', type=str, default='(2048, 2048)', help='input image size')
+
 parser.add_argument('--batch_size', type=int, default=8, help='batch size')
+# parser.add_argument('--batch_size', type=int, default=4, help='batch size')
 parser.add_argument('--num_epochs', type=int, default=10, help='number of epochs')
 parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
 # parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
@@ -88,10 +93,10 @@ parser.add_argument('--weight_decay', type=float, default=0.0001, help='weight d
 parser.add_argument('--eval_patience', type=int, default=20, help='patience for early stopping')
 
 
-# In[5]:
+# In[4]:
 
 
-settings = None
+setting = None
 try:
     __IPYTHON__
     _in_ipython_session = True
@@ -104,6 +109,14 @@ print("settings:", vars(settings))
 # # save settings in to a log file
 # with open(Path(settings.model_dir, settings.experiment_name, 'settings.txt'), 'w') as f:
 #     print(vars(settings), file=f)
+
+
+# In[5]:
+
+
+# settings.image_input_size = (2048, 2048)
+# settings.train_image_folder = "img_size_2048x2048"
+# settings.test_image_folder = "test_img_size_2048x2048"
 
 
 # In[6]:
@@ -337,21 +350,28 @@ class UBCDataset(Dataset):
         image = Image.open(image_path)
         # print(np.max(image), np.min(image))
 
-        image_np = np.array(image)
-        ### white to black
-        mask = (image_np >= np.array([230, 230, 230])).all(axis=-1)
-        image_np[mask] = [0, 0, 0]
-        image = Image.fromarray(image_np)
+        # image_np = np.array(image)
+        # ### white to black
+        # mask = (image_np >= np.array([230, 230, 230])).all(axis=-1)
+        # image_np[mask] = [0, 0, 0]
+        # image = Image.fromarray(image_np)
 
         if self.transform:
             image = self.transform(image)
         if self.target_transform:
             label = self.target_transform(label)
         # print(torch.max(image), torch.min(image))
+
+        img_downsampled = transforms.Resize((512, 512), antialias=True)(image)
+        # print(img_downsampled.shape)
+        img_10 = image[: , 1024-256:1024+256, 384-256:384+256]
+        img_11 = image[: , 1024-256:1024+256, 1024-256:1024+256]
+        img_12 = image[: , 1024-256:1024+256, 2048-384-256:2048-384+256]
         
-        if self.random_add_single_value:
-            image += torch.randn(1) * 0.01
-        return image, label
+        # if self.random_add_single_value:
+        #     image += torch.randn(1) * 0.01
+        
+        return img_downsampled, label, img_10, img_11, img_12
 
 
 # In[20]:
@@ -398,9 +418,41 @@ valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=Fals
 # In[22]:
 
 
+for imgs, labels, imgs_10, imgs_11, imgs_12 in tqdm(valid_dataloader):
+    # # print(x[0].shape, x[1].shape)
+    
+    
+    # # imgs_downsampled = transforms.Resize((512, 512), antialias=True)(imgs)
+    image_grid_orig_downsampled = torchvision.utils.make_grid(imgs[:8], nrow=8)
+
+    # # print(imgs_downsampled.shape)
+
+    # # imgs_10 = imgs[: ,: , 1024-256:1024+256, 384-256:384+256]
+    # # imgs_11 = imgs[: ,: , 1024-256:1024+256, 1024-256:1024+256]
+    # # imgs_12 = imgs[: ,: , 1024-256:1024+256, 2048-384-256:2048-384+256]
+    # # # print(imgs.shape)
+    # # print(imgs[0])
+    
+    image_grid_10 = torchvision.utils.make_grid(imgs_10[:8], nrow=8)
+    image_grid_11 = torchvision.utils.make_grid(imgs_11[:8], nrow=8)
+    image_grid_12 = torchvision.utils.make_grid(imgs_12[:8], nrow=8)
+    plt.figure()
+    plt.imshow(image_grid_orig_downsampled.permute(1, 2, 0).numpy())
+    plt.figure()
+    plt.imshow(image_grid_10.permute(1, 2, 0).numpy())
+    plt.figure()
+    plt.imshow(image_grid_11.permute(1, 2, 0).numpy())
+    plt.figure()
+    plt.imshow(image_grid_12.permute(1, 2, 0).numpy())
+    break
+
+
+# In[23]:
+
+
 #show image grid
 def show_image_grid(dataloader, num_of_images=16):
-    imgs, labels = next(iter(dataloader))
+    imgs, labels, imgs_10, imgs_11, imgs_12 = next(iter(dataloader))
 
     # imgs_tmp = imgs.permute(0, 2, 3, 1)
     # # mask = (imgs_tmp == torch.tensor([255, 255, 255])).all(dim=3, keepdim=True)
@@ -418,7 +470,7 @@ def show_image_grid(dataloader, num_of_images=16):
 # show_image_grid( DataLoader(valid_dataset, batch_size=64, shuffle=False, num_workers=0), 64)
 
 
-# In[23]:
+# In[24]:
 
 
 # efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_v2_l', pretrained=True)
@@ -431,7 +483,7 @@ def show_image_grid(dataloader, num_of_images=16):
 # print(efficientnet.classifier.fc.in_features)
 
 
-# In[24]:
+# In[25]:
 
 
 efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
@@ -453,59 +505,165 @@ utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_convnets_
 # vars(efficientnet)
 
 
-# In[25]:
+# In[28]:
 
 
-model_raw = efficientnet
-classifier_in_feature_size = model_raw.classifier.fc.in_features
-classifier_head = torch.nn.Sequential(
-    torch.nn.AdaptiveAvgPool2d(output_size=1),
-    torch.nn.Flatten(),
-    torch.nn.Dropout(p=0.2, inplace=False),
-    torch.nn.Linear(in_features=classifier_in_feature_size, out_features=256, bias=True),
-    torch.nn.ReLU(),
-    torch.nn.Dropout(p=0.2, inplace=False),
-    torch.nn.Linear(in_features=256, out_features=5, bias=True),
-)
-model_raw.classifier = classifier_head
+class Output4CombineModel(nn.Module):
+    def __init__(self, efficientnet):
+        super(Output4CombineModel, self).__init__()
+
+        self.cnn_input_combine = torch.nn.Sequential(
+                    torch.nn.Conv2d(in_channels=12, out_channels=16, kernel_size=3, stride=1, padding=1, bias=True),
+                    torch.nn.ReLU(),
+                    torch.nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding=1, bias=True),
+                    torch.nn.ReLU(),
+                    torch.nn.Conv2d(in_channels=16, out_channels=3, kernel_size=3, stride=1, padding=1, bias=True),
+                    torch.nn.ReLU()
+                )
+
+        self.efficientnet = copy.deepcopy(efficientnet)
+        self.classifier_in_feature_size = self.efficientnet.classifier.fc.in_features
+        
+        self.classifier_head = torch.nn.Sequential(
+            torch.nn.AdaptiveAvgPool2d(output_size=1),
+            torch.nn.Flatten(),
+            torch.nn.Dropout(p=0.2, inplace=False),
+            torch.nn.Linear(in_features=self.classifier_in_feature_size, out_features=256, bias=True),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(p=0.2, inplace=False),
+            torch.nn.Linear(in_features=256, out_features=5, bias=True),
+            # torch.nn.Linear(in_features=256, out_features=16, bias=True),
+        )
+        self.efficientnet.classifier = self.classifier_head
+
+
+        # self.combined_classifier_head = torch.nn.Sequential(
+        #     torch.nn.Linear(in_features=16*4, out_features=32, bias=True),
+        #     torch.nn.ReLU(),
+        #     torch.nn.Dropout(p=0.2, inplace=False),
+        #     torch.nn.Linear(in_features=32, out_features=5, bias=True),
+        # )
+
+        self.transform_downsampler = transforms.Resize((512, 512), antialias=True)
+
+        self.cnn_input_combine_params = []
+        for name, params in self.cnn_input_combine.named_parameters():
+            self.cnn_input_combine_params.append(params)
+
+        self.feature_extractor_params = []
+        for name, params in self.efficientnet.named_parameters():
+            if(name[:10] == "classifier"):
+                continue
+            self.feature_extractor_params.append(params)
+
+        self.classifier_head_params = []
+        for name, params in self.classifier_head.named_parameters():
+            self.classifier_head_params.append(params)
+
+        # self.combined_classifier_head_params = []
+        # for name, params in self.combined_classifier_head.named_parameters():
+        #     self.combined_classifier_head_params.append(params)
+
+    def forward(self, imgs, imgs_10, imgs_11, imgs_12):
+        # imgs_downsampled = self.transform_downsampler(imgs)
+        concat_in = torch.concat([imgs, imgs_10, imgs_11, imgs_12], dim=1)
+        combine_in = self.cnn_input_combine(concat_in)
+        outputs = self.efficientnet(combine_in)
+        # f_orig = self.efficientnet(imgs)
+        # f_10 = self.efficientnet(imgs_10)
+        # f_11 = self.efficientnet(imgs_11)
+        # f_12 = self.efficientnet(imgs_12)
+        # comb_f = torch.concat([f_orig, f_10, f_11, f_12], dim=1)
+        # print(comb_f.shape)
+        # outputs = self.combined_classifier_head(comb_f)
+        
+        
+        return outputs, combine_in
+            
+
+
+# In[29]:
+
+
+# model_raw = efficientnet
+# classifier_in_feature_size = model_raw.classifier.fc.in_features
+# classifier_head = torch.nn.Sequential(
+#     torch.nn.AdaptiveAvgPool2d(output_size=1),
+#     torch.nn.Flatten(),
+#     torch.nn.Dropout(p=0.2, inplace=False),
+#     torch.nn.Linear(in_features=classifier_in_feature_size, out_features=256, bias=True),
+#     torch.nn.ReLU(),
+#     torch.nn.Dropout(p=0.2, inplace=False),
+#     # torch.nn.Linear(in_features=256, out_features=5, bias=True),
+#     torch.nn.Linear(in_features=256, out_features=16, bias=True),
+# )
+# model_raw.classifier = classifier_head
+# model_raw = model_raw.to(device)
+
+
+
+# combined_classifier_head = torch.nn.Sequential(
+#     torch.nn.Linear(in_features=16*4, out_features=32, bias=True),
+#     torch.nn.ReLU(),
+#     torch.nn.Dropout(p=0.2, inplace=False),
+#     torch.nn.Linear(in_features=32, out_features=5, bias=True),
+# )
+# combined_classifier_head = combined_classifier_head.to(device)
+
+
+
+
+# feature_extractor_params = []
+# for name, params in model_raw.named_parameters():
+#     if(name[:10] == "classifier"):
+#         continue
+#     feature_extractor_params.append(params)
+
+# classifier_head_params = []
+# for name, params in classifier_head.named_parameters():
+#     classifier_head_params.append(params)
+
+# combined_classifier_head_params = []
+# for name, params in combined_classifier_head.named_parameters():
+#     combined_classifier_head_params.append(params)
+
+model_raw = Output4CombineModel(efficientnet)
 model_raw = model_raw.to(device)
+cnn_input_combine_params = model_raw.cnn_input_combine_params
+feature_extractor_params = model_raw.feature_extractor_params
+classifier_head_params = model_raw.classifier_head_params
+# combined_classifier_head_params = model_raw.combined_classifier_head_params
 
 
-feature_extractor_params = []
-for name, params in model_raw.named_parameters():
-    if(name[:10] == "classifier"):
-        continue
-    feature_extractor_params.append(params)
-
-classifier_head_params = []
-for name, params in classifier_head.named_parameters():
-    classifier_head_params.append(params)
-
-
-# In[26]:
+# In[30]:
 
 
 # print("feature_extractor_params:", len(feature_extractor_params))
 # print(classifier_head_params)
 
 
-# In[27]:
+# In[31]:
 
 
-summary(model_raw, (3, ) + IMAGE_INPUT_SIZE, device=device.type)
+# summary(model_raw, (3, ) + IMAGE_INPUT_SIZE, device=device.type)
+# summary(model_raw, [(3, ) + (512, 512), (3, ) + (512, 512), (3, ) + (512, 512), (3, ) + (512, 512)], device=device.type)
 
 
-# In[28]:
+# In[33]:
 
 
 
 criteria = nn.CrossEntropyLoss()
 # optimizer = optim.Adam(model_raw.classifier.parameters(), lr=lr, weight_decay=weight_decay)
-optimizer = optim.Adam([{"params":feature_extractor_params, "lr":1e-7}, {"params":classifier_head_params, "lr":lr}], 
+optimizer = optim.Adam([{ "params":cnn_input_combine_params, "lr":lr},
+                        {"params":feature_extractor_params, "lr":1e-7}, 
+                        {"params":classifier_head_params, "lr":lr},
+                        # {"params":combined_classifier_head_params, "lr":lr}
+                        ], 
                        lr=lr, weight_decay=weight_decay)
 
 
-# In[29]:
+# In[34]:
 
 
 
@@ -535,7 +693,7 @@ def get_category_accuracy(y_gt: np.array, y_pred: np.array, n_category):
 # print("get_category_accuracy:" + str(category_accuracy))
 
 
-# In[30]:
+# In[35]:
 
 
 def evaluation(model, valid_dataloader, criteria, device):
@@ -546,20 +704,64 @@ def evaluation(model, valid_dataloader, criteria, device):
         y_gt = []
         y_pred = []
 
-        for imgs, labels in tqdm(valid_dataloader):
+        # for imgs, labels in tqdm(valid_dataloader):
+        for imgs, labels, imgs_10, imgs_11, imgs_12 in tqdm(valid_dataloader):
             imgs = imgs.to(device)
             labels = labels.to(device)
 
+            imgs_10 = imgs_10.to(device)
+            imgs_11 = imgs_11.to(device)
+            imgs_12 = imgs_12.to(device)
+
+            # imgs_downsampled = transforms.Resize((512, 512), antialias=True)(imgs)
+            # imgs_10 = imgs[: ,: , 1024-256:1024+256, 384-256:384+256]
+            # imgs_11 = imgs[: ,: , 1024-256:1024+256, 1024-256:1024+256]
+            # imgs_12 = imgs[: ,: , 1024-256:1024+256, 2048-384-256:2048-384+256]
+            # # imgs_in = torch.concat([imgs_downsampled, imgs_10, imgs_11, imgs_12], dim=1)
+
+            # outputs_orig = model(imgs_downsampled)
+            # outputs_orig = model(imgs)
+            # outputs_10 = model(imgs_10)
+            # outputs_11 = model(imgs_11)
+            # outputs_12 = model(imgs_12)
+            
+
             with torch.no_grad():
-                outputs = model(imgs)
+                outputs, combine_in = model(imgs, imgs_10, imgs_11, imgs_12)
+
+                # similarity_scores_a00 = torch.matmul(f_orig, f_10.T)
+                # similarity_scores_a01 = torch.matmul(f_orig, f_11.T)
+                # similarity_scores_a02 = torch.matmul(f_orig, f_12.T)
+                # similarity_scores_a03 = torch.matmul(f_10, f_11.T)
+                # similarity_scores_a04 = torch.matmul(f_10, f_11.T)
+                # similarity_scores_a05 = torch.matmul(f_11, f_12.T)
+
+                # gt_similarity = torch.eye(similarity_scores_a00.shape[0], device=similarity_scores_a00.device)
+                # loss_similarity = criteria(similarity_scores_a00, gt_similarity) + \
+                #                     criteria(similarity_scores_a01, gt_similarity) + \
+                #                     criteria(similarity_scores_a02, gt_similarity) + \
+                #                     criteria(similarity_scores_a03, gt_similarity) + \
+                #                     criteria(similarity_scores_a04, gt_similarity) + \
+                #                     criteria(similarity_scores_a05, gt_similarity)    
+
+
                 _, preds = torch.max(outputs, -1)
-                loss = criteria(outputs, labels)
+                loss_classification = criteria(outputs, labels)
+
+                # loss = loss_classification + loss_similarity / 6.0
+                loss = loss_classification
+
+                # # outputs = model(imgs_in)
+                # # outputs = model(imgs)
+                # _, preds = torch.max(outputs, -1)
+                # loss = criteria(outputs, labels)
 
             valid_loss += loss.item() * imgs.size(0)
             valid_corrects += torch.sum(preds == labels.data).detach().cpu().numpy()
 
             y_gt.extend(labels.data.cpu().numpy().reshape(-1))
             y_pred.extend(preds.cpu().numpy().reshape(-1))
+
 
         # print(y_gt)
         # print(y_pred)
@@ -579,7 +781,7 @@ def evaluation(model, valid_dataloader, criteria, device):
         return valid_loss, valid_acc, valid_balanced_acc, y_pred, y_gt
 
 
-# In[31]:
+# In[36]:
 
 
 def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device):
@@ -616,14 +818,54 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
         y_gt = []
         y_pred = []
 
-        for imgs, labels in tqdm(train_dataloader):
+        # for imgs, labels in tqdm(train_dataloader):
+        for imgs, labels, imgs_10, imgs_11, imgs_12  in tqdm(train_dataloader):
             imgs = imgs.to(device)
             labels = labels.to(device)
 
+            imgs_10 = imgs_10.to(device)
+            imgs_11 = imgs_11.to(device)
+            imgs_12 = imgs_12.to(device)
 
-            outputs = model(imgs)
+
+    
+            # imgs_downsampled = transforms.Resize((512, 512), antialias=True)(imgs)
+            # imgs_10 = imgs[: ,: , 1024-256:1024+256, 384-256:384+256]
+            # imgs_11 = imgs[: ,: , 1024-256:1024+256, 1024-256:1024+256]
+            # imgs_12 = imgs[: ,: , 1024-256:1024+256, 2048-384-256:2048-384+256]
+            # imgs_in = torch.concat([imgs_downsampled, imgs_10, imgs_11, imgs_12], dim=1)
+
+            # # outputs_orig = model(imgs_downsampled)
+            # outputs_orig = model(imgs)
+            # outputs_10 = model(imgs_10)
+            # outputs_11 = model(imgs_11)
+            # outputs_12 = model(imgs_12)
+            
+            outputs, combine_in = model(imgs, imgs_10, imgs_11, imgs_12)
+            # outputs = outputs_orig
+            # outputs = model(imgs)
+
+            # similarity_scores_a00 = torch.matmul(f_orig, f_10.T)
+            # similarity_scores_a01 = torch.matmul(f_orig, f_11.T)
+            # similarity_scores_a02 = torch.matmul(f_orig, f_12.T)
+            # similarity_scores_a03 = torch.matmul(f_10, f_11.T)
+            # similarity_scores_a04 = torch.matmul(f_10, f_11.T)
+            # similarity_scores_a05 = torch.matmul(f_11, f_12.T)
+
+            # gt_similarity = torch.eye(similarity_scores_a00.shape[0], device=similarity_scores_a00.device)
+            # loss_similarity = criteria(similarity_scores_a00, gt_similarity) + \
+            #                     criteria(similarity_scores_a01, gt_similarity) + \
+            #                     criteria(similarity_scores_a02, gt_similarity) + \
+            #                     criteria(similarity_scores_a03, gt_similarity) + \
+            #                     criteria(similarity_scores_a04, gt_similarity) + \
+            #                     criteria(similarity_scores_a05, gt_similarity)    
+
+
             _, preds = torch.max(outputs, -1)
-            loss = criteria(outputs, labels)
+            loss_classification = criteria(outputs, labels)
+
+            loss = loss_classification
+            # loss = loss_classification + loss_similarity / 6.0
 
             optimizer.zero_grad()
             loss.backward()
@@ -702,7 +944,7 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
     return model, best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc,            train_loss_list, train_acc_list, train_balanced_acc_list,            valid_loss_list, valid_acc_list, valid_balanced_acc_list,            best_valid_loss, best_valid_acc
 
 
-# In[32]:
+# In[37]:
 
 
 def store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc,                  train_loss_list, train_acc_list, train_balanced_acc_list,                  valid_loss_list, valid_acc_list, valid_balanced_acc_list):
@@ -728,7 +970,7 @@ def store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_b
         pickle.dump(valid_balanced_acc_list, f)
 
 
-# In[33]:
+# In[38]:
 
 
 def plot_train_eval_result(
@@ -764,7 +1006,7 @@ def plot_train_eval_result(
     plt.tight_layout()
 
 
-# In[34]:
+# In[39]:
 
 
 model_trained, best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, train_loss_list, train_acc_list, train_balanced_acc_list, valid_loss_list, valid_acc_list, valid_balanced_acc_list, best_valid_loss, best_valid_acc = train(model_raw, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device)
@@ -774,7 +1016,7 @@ print("best_valid_acc:", np.max(valid_acc_list))
 print("best_valid_balanced_acc:", np.max(valid_balanced_acc_list))
 
 
-# In[35]:
+# In[ ]:
 
 
 # # train_loss_list = [data.cpu().item() for data in train_loss_list]
@@ -783,13 +1025,13 @@ print("best_valid_balanced_acc:", np.max(valid_balanced_acc_list))
 # valid_acc_list = [data.cpu().item() for data in valid_acc_list]
 
 
-# In[36]:
+# In[ ]:
 
 
 store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc,              train_loss_list, train_acc_list, train_balanced_acc_list,              valid_loss_list, valid_acc_list, valid_balanced_acc_list)
 
 
-# In[37]:
+# In[ ]:
 
 
 plot_train_eval_result(
@@ -803,7 +1045,7 @@ plot_train_eval_result(
 
 
 
-# In[45]:
+# In[ ]:
 
 
 valid_loss, valid_acc, valid_balanced_acc, y_pred, y_gt = evaluation(best_model_valid_acc, valid_dataloader, criteria, device)
@@ -818,7 +1060,7 @@ for pred, gt, label, path in zip(y_pred, y_gt, labels, path_list):
     print(f"pred: {dict_id_to_label[pred]}, gt: {dict_id_to_label[gt]}, label: {dict_id_to_label[label]}, filename: {filename}")
 
 
-# In[44]:
+# In[ ]:
 
 
 print(f"pred: {dict_id_to_label[pred]}, gt: {dict_id_to_label[gt]}, label: {dict_id_to_label[label]}, filename: {filename}")
