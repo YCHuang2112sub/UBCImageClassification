@@ -7,7 +7,7 @@
 # !python script.py
 
 
-# In[1]:
+# In[2]:
 
 
 import torch
@@ -57,16 +57,16 @@ import logging
 
 
 
-# In[2]:
+# In[3]:
 
 
 
 print("number_of_cpus: ", torch.get_num_threads())
-torch.set_num_threads(16)
+torch.set_num_threads(8)
 print("confined to number_of_cpus: ", torch.get_num_threads())
 
 
-# In[3]:
+# In[4]:
 
 
 ## using argparse to set parameters
@@ -93,7 +93,7 @@ parser.add_argument('--weight_decay', type=float, default=0.0001, help='weight d
 parser.add_argument('--eval_patience', type=int, default=20, help='patience for early stopping')
 
 
-# In[4]:
+# In[5]:
 
 
 setting = None
@@ -111,7 +111,7 @@ print("settings:", vars(settings))
 #     print(vars(settings), file=f)
 
 
-# In[5]:
+# In[6]:
 
 
 # settings.image_input_size = (2048, 2048)
@@ -119,7 +119,7 @@ print("settings:", vars(settings))
 # settings.test_image_folder = "test_img_size_2048x2048"
 
 
-# In[6]:
+# In[7]:
 
 
 image_input_size = eval(settings.image_input_size)
@@ -129,7 +129,7 @@ assert isinstance(image_input_size, tuple) and len(image_input_size) == 2, "imag
 # # print(image_input_size)
 
 
-# In[7]:
+# In[8]:
 
 
 PIL.Image.MAX_IMAGE_PIXELS = 933120000
@@ -138,7 +138,7 @@ PIL.Image.MAX_IMAGE_PIXELS = 933120000
 IMAGE_INPUT_SIZE = image_input_size
 
 
-# In[8]:
+# In[9]:
 
 
 def create_dir_if_not_exist(dir):
@@ -148,7 +148,7 @@ def create_dir_if_not_exist(dir):
         Path(dir).mkdir(parents=True, exist_ok=True)
 
 
-# In[9]:
+# In[10]:
 
 
 SOURCE_DATASET_DIR = settings.source_dataset_dir
@@ -179,7 +179,7 @@ print("LOG_DIR:", LOG_DIR)
 create_dir_if_not_exist(LOG_DIR)
 
 
-# In[10]:
+# In[11]:
 
 
 # # logging.basicConfig(level=logging.DEBUG)
@@ -201,7 +201,7 @@ logging.basicConfig(level=logging.DEBUG, filename=LOG_DIR/'log.txt', filemode='w
 # 	time.sleep(5)
 
 
-# In[11]:
+# In[12]:
 
 
 # lr = 0.001
@@ -218,20 +218,20 @@ num_epochs = settings.num_epochs
 batch_size = settings.batch_size
 
 
-# In[12]:
+# In[13]:
 
 
 create_dir_if_not_exist(LOCAL_DATASET_DIR)
 
 
-# In[13]:
+# In[14]:
 
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 print(f'Using {device} for inference')
 
 
-# In[14]:
+# In[15]:
 
 
 #pandas load data from csv
@@ -257,7 +257,7 @@ else:
 
 
 
-# In[15]:
+# In[16]:
 
 
 dict_id_to_label = {i: label for i, label in enumerate(all_labels)}
@@ -267,7 +267,7 @@ dict_label_to_id = {label: i for i, label in enumerate(all_labels)}
 print("dict_id_to_label:", sorted(dict_id_to_label.items()))
 
 
-# In[16]:
+# In[17]:
 
 
 def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to_id):
@@ -285,7 +285,7 @@ def tran_csv_to_img_path_and_label(x_csv, data_path, image_folder, dict_label_to
     return x_data
 
 
-# In[17]:
+# In[18]:
 
 
 train_image_path_and_label = tran_csv_to_img_path_and_label(train_csv, LOCAL_DATASET_DIR, TRAIN_IMAGE_FOLDER, dict_label_to_id)
@@ -312,7 +312,7 @@ path_list, labels = zip(*valid_set)
 print("train set category distribution: \n\t", Counter(labels))
 
 
-# In[18]:
+# In[19]:
 
 
 def show_img_by_path(img_path):
@@ -329,7 +329,7 @@ def show_img_by_path(img_path):
 # show_img_by_path(train_set[0][0])
 
 
-# In[19]:
+# In[20]:
 
 
 from torchvision.io import read_image
@@ -374,7 +374,7 @@ class UBCDataset(Dataset):
         return img_downsampled, label, img_10, img_11, img_12
 
 
-# In[20]:
+# In[21]:
 
 
 # put data into dataloader
@@ -407,7 +407,7 @@ valid_dataset = UBCDataset(valid_set, transform=test_transform)
 # test_dataset = UBCDataset(test_set, transform=test_transform)
 
 
-# In[21]:
+# In[22]:
 
 
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
@@ -415,7 +415,7 @@ valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=Fals
 # test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
 
 
-# In[22]:
+# In[23]:
 
 
 for imgs, labels, imgs_10, imgs_11, imgs_12 in tqdm(valid_dataloader):
@@ -447,7 +447,7 @@ for imgs, labels, imgs_10, imgs_11, imgs_12 in tqdm(valid_dataloader):
     break
 
 
-# In[23]:
+# In[24]:
 
 
 #show image grid
@@ -470,7 +470,7 @@ def show_image_grid(dataloader, num_of_images=16):
 # show_image_grid( DataLoader(valid_dataset, batch_size=64, shuffle=False, num_workers=0), 64)
 
 
-# In[24]:
+# In[25]:
 
 
 # efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_v2_l', pretrained=True)
@@ -483,7 +483,7 @@ def show_image_grid(dataloader, num_of_images=16):
 # print(efficientnet.classifier.fc.in_features)
 
 
-# In[25]:
+# In[26]:
 
 
 efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
@@ -505,21 +505,147 @@ utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_convnets_
 # vars(efficientnet)
 
 
+# In[27]:
+
+
+
+class DoubleConv(nn.Module):
+    def __init__(self, in_ch, out_ch):
+        super(DoubleConv, self).__init__()
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_ch, out_ch, 3, padding=1),
+            nn.BatchNorm2d(out_ch),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_ch, out_ch, 3, padding=1),
+            nn.BatchNorm2d(out_ch),
+            nn.ReLU(inplace=True))
+
+    def forward(self, x):
+        x = self.conv(x)
+        return x
+
+
+class InConv(nn.Module):
+    def __init__(self, in_ch, out_ch):
+        super(InConv, self).__init__()
+        self.conv = DoubleConv(in_ch, out_ch)
+
+    def forward(self, x):
+        x = self.conv(x)
+        return x
+
+
+class Down(nn.Module):
+    def __init__(self, in_ch, out_ch):
+        super(Down, self).__init__()
+        self.mpconv = nn.Sequential(
+            nn.MaxPool2d(2),
+            DoubleConv(in_ch, out_ch)
+        )
+
+    def forward(self, x):
+        x = self.mpconv(x)
+        return x
+
+
+class Up(nn.Module):
+    def __init__(self, in_ch, out_ch, bilinear=False):
+        super(Up, self).__init__()
+
+        if bilinear:
+            self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+        else:
+            self.up = nn.ConvTranspose2d(in_ch // 2, in_ch // 2, 2, stride=2)
+
+        self.conv = DoubleConv(in_ch, out_ch)
+
+    def forward(self, x1, x2):
+        x1 = self.up(x1)
+
+        diffY = x2.size()[2] - x1.size()[2]
+        diffX = x2.size()[3] - x1.size()[3]
+
+        x1 = F.pad(x1, (diffX // 2, diffX - diffX // 2,
+                        diffY // 2, diffY - diffY // 2))
+        x = torch.cat([x2, x1], dim=1)
+        x = self.conv(x)
+        return x
+
+
+class OutConv(nn.Module):
+    def __init__(self, in_ch, out_ch):
+        super(OutConv, self).__init__()
+        self.conv = nn.Conv2d(in_ch, out_ch, 1)
+
+    def forward(self, x):
+        x = self.conv(x)
+        return x
+
+class Unet(nn.Module):
+    def __init__(self, in_channels, classes):
+        super(Unet, self).__init__()
+        self.n_channels = in_channels
+        self.n_classes =  classes
+
+        # self.inc = InConv(in_channels, 64//4)
+        # self.down1 = Down(64//4, 128//8)
+        # self.down2 = Down(128//8, 256//8 //2)
+        # self.down3 = Down(256//8 //2, 512//8 //4)
+        # self.down4 = Down(512//8 //4, 512//8 //4)
+        # self.up1 = Up(1024//8 //4, 256//8 //2)
+        # self.up2 = Up(512//8  //2, 128//8)
+        # self.up3 = Up(256//8 , 64//4)
+        # self.up4 = Up(128//4, 64//4)
+        # self.outc = OutConv(64//4, classes)
+
+        self.inc = InConv(in_channels, 64//4)
+        self.down1 = Down(64//4, 128//8)
+        self.down2 = Down(128//8, 256//8)
+        self.down3 = Down(256//8, 512//8)
+        self.down4 = Down(512//8, 512//8)
+        self.up1 = Up(1024//8, 256//8)
+        self.up2 = Up(512//8, 128//8)
+        self.up3 = Up(256//8, 64//4)
+        self.up4 = Up(128//4, 64//4)
+        self.outc = OutConv(64//4, classes)
+
+    def forward(self, x):
+        x1 = self.inc(x)
+        x2 = self.down1(x1)
+        x3 = self.down2(x2)
+        x4 = self.down3(x3)
+        x5 = self.down4(x4)
+        x = self.up1(x5, x4)
+        # print("x.shape:", x.shape, "x3.shape:", x3.shape)
+        x = self.up2(x, x3)
+        # print("x.shape:", x.shape, "x2.shape:", x2.shape)
+        x = self.up3(x, x2)
+        # print("x.shape:", x.shape, "x1.shape:", x1.shape)
+        x = self.up4(x, x1)
+        # print("x.shape:", x.shape)
+        x = self.outc(x)
+        # return x, (x1, x2, x3, x4, x5)
+        xs = (x1, x2, x3, x4, x5)
+        return x, x1, x2, x3, x4, x5
+
+
 # In[28]:
 
 
 class Output4CombineModel(nn.Module):
-    def __init__(self, efficientnet):
+    def __init__(self, efficientnet, unet):
         super(Output4CombineModel, self).__init__()
 
-        self.cnn_input_combine = torch.nn.Sequential(
-                    torch.nn.Conv2d(in_channels=12, out_channels=16, kernel_size=3, stride=1, padding=1, bias=True),
-                    torch.nn.ReLU(),
-                    torch.nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding=1, bias=True),
-                    torch.nn.ReLU(),
-                    torch.nn.Conv2d(in_channels=16, out_channels=3, kernel_size=3, stride=1, padding=1, bias=True),
-                    torch.nn.ReLU()
-                )
+        # self.cnn_input_combine = torch.nn.Sequential(
+        #             torch.nn.Conv2d(in_channels=12, out_channels=16, kernel_size=3, stride=1, padding=1, bias=True),
+        #             torch.nn.ReLU(),
+        #             torch.nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding=1, bias=True),
+        #             torch.nn.ReLU(),
+        #             torch.nn.Conv2d(in_channels=16, out_channels=3, kernel_size=3, stride=1, padding=1, bias=True),
+        #             torch.nn.ReLU()
+        #         )
+        
+        self.unet = copy.deepcopy(unet)
 
         self.efficientnet = copy.deepcopy(efficientnet)
         self.classifier_in_feature_size = self.efficientnet.classifier.fc.in_features
@@ -546,9 +672,9 @@ class Output4CombineModel(nn.Module):
 
         self.transform_downsampler = transforms.Resize((512, 512), antialias=True)
 
-        self.cnn_input_combine_params = []
-        for name, params in self.cnn_input_combine.named_parameters():
-            self.cnn_input_combine_params.append(params)
+        self.unet_params = []
+        for name, params in self.unet.named_parameters():
+            self.unet_params.append(params)
 
         self.feature_extractor_params = []
         for name, params in self.efficientnet.named_parameters():
@@ -567,7 +693,10 @@ class Output4CombineModel(nn.Module):
     def forward(self, imgs, imgs_10, imgs_11, imgs_12):
         # imgs_downsampled = self.transform_downsampler(imgs)
         concat_in = torch.concat([imgs, imgs_10, imgs_11, imgs_12], dim=1)
-        combine_in = self.cnn_input_combine(concat_in)
+        # combine_in = self.cnn_input_combine(concat_in)
+        # combine_in = self.unet(concat_in)
+        combine_in, x1, x2, x3, x4, x5 = self.unet(concat_in)
+        # x1, x2, x3, x4, x5 = xs
         outputs = self.efficientnet(combine_in)
         # f_orig = self.efficientnet(imgs)
         # f_10 = self.efficientnet(imgs_10)
@@ -627,9 +756,11 @@ class Output4CombineModel(nn.Module):
 # for name, params in combined_classifier_head.named_parameters():
 #     combined_classifier_head_params.append(params)
 
-model_raw = Output4CombineModel(efficientnet)
+unet = Unet(3*4, 3)
+
+model_raw = Output4CombineModel(efficientnet, unet)
 model_raw = model_raw.to(device)
-cnn_input_combine_params = model_raw.cnn_input_combine_params
+unet_params = model_raw.unet_params
 feature_extractor_params = model_raw.feature_extractor_params
 classifier_head_params = model_raw.classifier_head_params
 # combined_classifier_head_params = model_raw.combined_classifier_head_params
@@ -649,13 +780,13 @@ classifier_head_params = model_raw.classifier_head_params
 # summary(model_raw, [(3, ) + (512, 512), (3, ) + (512, 512), (3, ) + (512, 512), (3, ) + (512, 512)], device=device.type)
 
 
-# In[33]:
+# In[32]:
 
 
 
 criteria = nn.CrossEntropyLoss()
 # optimizer = optim.Adam(model_raw.classifier.parameters(), lr=lr, weight_decay=weight_decay)
-optimizer = optim.Adam([{ "params":cnn_input_combine_params, "lr":lr},
+optimizer = optim.Adam([{ "params":unet_params, "lr":lr},
                         {"params":feature_extractor_params, "lr":1e-7}, 
                         {"params":classifier_head_params, "lr":lr},
                         # {"params":combined_classifier_head_params, "lr":lr}
@@ -663,7 +794,7 @@ optimizer = optim.Adam([{ "params":cnn_input_combine_params, "lr":lr},
                        lr=lr, weight_decay=weight_decay)
 
 
-# In[34]:
+# In[33]:
 
 
 
@@ -693,7 +824,7 @@ def get_category_accuracy(y_gt: np.array, y_pred: np.array, n_category):
 # print("get_category_accuracy:" + str(category_accuracy))
 
 
-# In[35]:
+# In[34]:
 
 
 def evaluation(model, valid_dataloader, criteria, device):
@@ -781,7 +912,7 @@ def evaluation(model, valid_dataloader, criteria, device):
         return valid_loss, valid_acc, valid_balanced_acc, y_pred, y_gt
 
 
-# In[36]:
+# In[35]:
 
 
 def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device):
@@ -944,7 +1075,7 @@ def train(model, train_dataloader, valid_dataloader, optimizer, criteria, num_ep
     return model, best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc,            train_loss_list, train_acc_list, train_balanced_acc_list,            valid_loss_list, valid_acc_list, valid_balanced_acc_list,            best_valid_loss, best_valid_acc
 
 
-# In[37]:
+# In[36]:
 
 
 def store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc,                  train_loss_list, train_acc_list, train_balanced_acc_list,                  valid_loss_list, valid_acc_list, valid_balanced_acc_list):
@@ -970,7 +1101,7 @@ def store_result(best_model_valid_acc, best_model_valid_loss, best_model_valid_b
         pickle.dump(valid_balanced_acc_list, f)
 
 
-# In[38]:
+# In[37]:
 
 
 def plot_train_eval_result(
@@ -1006,7 +1137,7 @@ def plot_train_eval_result(
     plt.tight_layout()
 
 
-# In[39]:
+# In[38]:
 
 
 model_trained, best_model_valid_acc, best_model_valid_loss, best_model_valid_balanced_acc, train_loss_list, train_acc_list, train_balanced_acc_list, valid_loss_list, valid_acc_list, valid_balanced_acc_list, best_valid_loss, best_valid_acc = train(model_raw, train_dataloader, valid_dataloader, optimizer, criteria, num_epochs, eval_patience, device)
